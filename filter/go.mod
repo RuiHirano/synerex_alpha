@@ -1,4 +1,4 @@
-module synerex-server
+module filter
 
 require (
 	github.com/sirupsen/logrus v1.2.0
@@ -20,7 +20,6 @@ replace (
 	github.com/synerex/synerex_alpha/api/ptransit => ../api/ptransit
 	github.com/synerex/synerex_alpha/api/rideshare => ../api/rideshare
 	github.com/synerex/synerex_alpha/api/routing => ../api/routing
-	github.com/synerex/synerex_alpha/filter => ../filter
 	github.com/synerex/synerex_alpha/monitor/monitorapi => ../monitor/monitorapi
 	github.com/synerex/synerex_alpha/nodeapi => ../nodeapi
 	github.com/synerex/synerex_alpha/sxutil => ../sxutil

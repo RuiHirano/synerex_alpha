@@ -42,7 +42,7 @@ func SendMes(mes *Mes){
 	}
 }
 
-
+// synerex-server.goにメッセージを送る
 func SendMessage(msgType string, chType int, id uint64, src uint64, dst uint64,tgt uint64, arg string){
 	mes := &Mes{Msgtype:msgType, Chtype:int32(chType),Id: id, Src: src,Dst: dst,Tgt:tgt, Args:arg}
 	resp, err := monitorClt.SendReport(context.Background(),mes )
@@ -51,6 +51,7 @@ func SendMessage(msgType string, chType int, id uint64, src uint64, dst uint64,t
 		log.Printf("Error in Sendmes %v",err)
 	}else{
 		if resp.Ok{
+			// synerex-server.goで表示
 			log.Printf("Success! to send %v",mes)
 		}
 	}

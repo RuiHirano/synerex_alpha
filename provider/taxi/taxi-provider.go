@@ -32,10 +32,11 @@ func init(){
 }
 
 // callback for each Demand
+//ユーザーなどほかのプロバイダが走ると呼ばれる関数
+//ユーザーの情報を取得する
 func demandCallback(clt *sxutil.SMServiceClient, dm *pb.Demand) {
 	// check if demand is match with my supply.
 	log.Println("Got ride share demand callback")
-
 	if dm.TargetId != 0 { // this is Select!
 		log.Println("getSelect!")
 
@@ -45,6 +46,7 @@ func demandCallback(clt *sxutil.SMServiceClient, dm *pb.Demand) {
 		// select any ride share demand!
 		// should check the type of ride..
 
+		log.Printf("Providerr dm %v\n", uint64(clt.ClientID))
 		// create dummy fleet
 		fleet := fleet.Fleet{
 			VehicleId: int32(10),
@@ -56,8 +58,9 @@ func demandCallback(clt *sxutil.SMServiceClient, dm *pb.Demand) {
 				Lon: float32(137.1474168),
 			},
 		}
-
+		//id := clt.getChannel().ClientId
 		sp := &sxutil.SupplyOpts{
+			ID: uint64(clt.ClientID),
 			Target: dm.GetId(),
 			Name: "RideShare by Taxi",
 			JSON: `{"Price":`+strconv.Itoa(*price)+`,"Distance": 5200, "Arrival": 300, "Destination": 500, "Position":{"Latitude":36.6, "Longitude":135}}`,
@@ -65,6 +68,7 @@ func demandCallback(clt *sxutil.SMServiceClient, dm *pb.Demand) {
 		} // set TargetID as Demand.Id (User will check by them)
 
 		mu.Lock()
+		log.Printf("Taxi SPaa ID %v\n\n", sp.ID)
 		pid := clt.ProposeSupply(sp)
 		idlist = append(idlist,pid)
 		spMap[pid] = sp
@@ -95,7 +99,7 @@ func oldproposeSupply(client pb.SynerexClient, targetNum uint64) {
 
 func main() {
 	flag.Parse()
-	sxutil.RegisterNodeName(*nodesrv, "TaxiProvider", false)
+	sxutil.RegisterNodeName(*nodesrv, "TaxiProvider", true)
 
 	go sxutil.HandleSigInt()
 	sxutil.RegisterDeferFunction(sxutil.UnRegisterNode)
@@ -110,7 +114,7 @@ func main() {
 	}
 
 	client := pb.NewSynerexClient(conn)
-	argJson := fmt.Sprintf("{Client:Taxi, Price: %d}",*price)
+	argJson := fmt.Sprintf("{Client:TaxiProVider, Price: %d}",*price)
 	sclient := sxutil.NewSMServiceClient(client, pb.ChannelType_RIDE_SHARE,argJson)
 
 	wg.Add(1)

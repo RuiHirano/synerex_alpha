@@ -19,16 +19,18 @@ import (
 	"log"
 	"net"
 	"path"
+	"strconv"
 	"strings"
 	"sync"
 	"time"
 
-	"strconv"
-
+	//"strconv"
+	"../filter"
 	"github.com/sirupsen/logrus"
 	"github.com/synerex/synerex_alpha/api"
 	"github.com/synerex/synerex_alpha/monitor/monitorapi"
 	"github.com/synerex/synerex_alpha/sxutil"
+	"github.com/synerex/synerex_alpha/nodeapi"
 	"google.golang.org/grpc"
 )
 
@@ -59,6 +61,8 @@ func init() {
 // Implementation of each Protocol API
 func (s *synerexServerInfo) RegisterDemand(c context.Context, dm *api.Demand) (r *api.Response, e error) {
 	// send demand for desired channels
+	fmt.Printf("Register Demand!!!")
+	fmt.Printf("RD Message")
 	okFlag := true
 	okMsg := ""
 	s.dmu.RLock()
@@ -122,13 +126,17 @@ func (s *synerexServerInfo) ProposeDemand(c context.Context, dm *api.Demand) (r 
 	return r, nil
 }
 func (s *synerexServerInfo) ProposeSupply(c context.Context, sp *api.Supply) (r *api.Response, e error) {
+	log.Printf("PS MessageDroop %v\n", sp)
 	okFlag := true
 	okMsg := ""
 	s.smu.RLock()
 	chs := s.supplyChans[sp.GetType()]
+	log.Printf("sp_type: %v\n", sp.GetType())
+	log.Printf("chs %v\n", chs)
 	for i := range chs {
 		ch := chs[i]
 		if len(ch) < MessageChannelBufferSize {
+			log.Printf("Taxi ProSP %v", sp)
 			ch <- sp
 		} else {
 			okMsg = fmt.Sprintf("PS MessageDrop %v", sp)
@@ -238,10 +246,14 @@ func (s *synerexServerInfo) Confirm(c context.Context, tg *api.Target) (r *api.R
 }
 
 // go routine which wait demand channel and sending demands to each providers.
-func demandServerFunc(ch chan *api.Demand, stream api.Synerex_SubscribeDemandServer, id sxutil.IDType) error {
+func demandServerFunc(ch chan *api.Demand, stream api.Synerex_SubscribeDemandServer) error {
+	log.Printf("demandServerFFFunc!!\n")
 	for {
 		select {
 		case dm := <-ch: // may block until receiving info
+
+			log.Printf("demandServerFunc dm %v\n", dm)
+			//コールバックに送る.idも一緒に送る
 			err := stream.Send(dm)
 
 			if err != nil {
@@ -274,7 +286,8 @@ func removeSupplyChannelFromSlice(sl []chan *api.Supply, c chan *api.Supply) []c
 	return sl
 }
 
-// SubscribeDemand is called form client to subscribe channel
+// サーバーチャネルに送る
+// streamはプロバイダのコールバック関数
 func (s *synerexServerInfo) SubscribeDemand(ch *api.Channel, stream api.Synerex_SubscribeDemandServer) error {
 	// TODO: we can check the duplication of node id here! (especially 1024 snowflake node ID)
 	idt := sxutil.IDType(ch.GetClientId())
@@ -286,6 +299,7 @@ func (s *synerexServerInfo) SubscribeDemand(ch *api.Channel, stream api.Synerex_
 	}
 
 	// It is better to logging here.
+	//モニターに送信
 	//	monitorapi.SendMes(&monitorapi.Mes{Message:"Subscribe Demand", Args: fmt.Sprintf("Type:%d,From: %x  %s",ch.Type,ch.ClientId, ch.ArgJson )})
 	monitorapi.SendMessage("SubscribeDemand", int(ch.Type), 0, ch.ClientId, 0,0, ch.ArgJson)
 
@@ -296,7 +310,8 @@ func (s *synerexServerInfo) SubscribeDemand(ch *api.Channel, stream api.Synerex_
 	s.demandChans[tp] = append(s.demandChans[tp], subCh)
 	s.demandMap[tp][idt] = subCh // mapping from clientID to channel
 	s.dmu.Unlock()
-	demandServerFunc(subCh, stream, idt) // infinite go routine?
+	log.Printf("NodeInfo: %v \n", idToNodeInfo(uint64(idt)))
+	demandServerFunc(subCh, stream) // infinite go routine?
 	// if this returns, stream might be closed.
 	// we should remove channel
 	s.dmu.Lock()
@@ -309,14 +324,39 @@ func (s *synerexServerInfo) SubscribeDemand(ch *api.Channel, stream api.Synerex_
 
 // This function is created for each subscribed provider
 // This is not efficient if the number of providers increases.
-func supplyServerFunc(ch chan *api.Supply, stream api.Synerex_SubscribeSupplyServer) error {
+func supplyServerFunc(ch chan *api.Supply, stream api.Synerex_SubscribeSupplyServer, id uint64) error {
 	for {
 		select {
 		case sp := <-ch:
-			err := stream.Send(sp)
-			if err != nil {
-				//				log.Printf("Error SupplyServer Error %v", err)
-				return err
+			log.Printf("Taxi SP ID %v\n\n", sp)
+			taxiId := sp.Id
+			taxiNodeInfo := idToNodeInfo(uint64(taxiId))
+			userId := id
+			userNodeInfo := idToNodeInfo(uint64(userId))
+			log.Printf("taxi id is:  %v\n\n", taxiId)
+			log.Printf("taxi node info is:  %v\n\n", taxiNodeInfo)
+			log.Printf("user id is:  %v\n\n", userId)
+			log.Printf("user node info is:  %v\n\n", userNodeInfo)
+			score := map[string]uint64{"TrustScore": userNodeInfo.TrustScore, "PrivateScore": userNodeInfo.PrivateTrust, "GroupTrust": userNodeInfo.GroupTrust}
+			threshold := map[string]map[string]uint64 {
+				"Price": {"TrustScore": uint64(53), "PrivateScore": uint64(23), "GroupScore": uint64(38)},
+				"Distance": {"TrustScore": uint64(23), "PrivateScore": uint64(24), "GroupScore": uint64(42)},
+				"Arrival": {"TrustScore": uint64(43), "PrivateScore": uint64(14), "GroupScore": uint64(23)},
+				"Destination": {"TrustScore": uint64(62), "PrivateScore": uint64(23), "GroupScore": uint64(33)},
+				"Position": {"TrustScore": uint64(34), "PrivateScore": uint64(43), "GroupScore": uint64(25)},
+			}
+			sp.JSON = filter.bit_cal(sp.JSON, score, threshold)
+			log.Printf("Taxi SP ID2 %v\n\n", sp)
+			okFlg := true
+			if okFlg {
+				err := stream.Send(sp)
+				if err != nil {
+					//				log.Printf("Error SupplyServer Error %v", err)
+					return err
+				}
+			}else{
+				log.Printf("Not Path Information!! \n\n")
+				return nil
 			}
 		}
 	}
@@ -338,10 +378,11 @@ func (s *synerexServerInfo) SubscribeSupply(ch *api.Channel, stream api.Synerex_
 	monitorapi.SendMessage("SubscribeSupply", int(ch.Type),0, ch.ClientId, 0,0, ch.ArgJson)
 
 	s.smu.Lock()
+	log.Printf("sp_type, tp: %v\n", ch.GetType())
 	s.supplyChans[tp] = append(s.supplyChans[tp], subCh)
 	s.supplyMap[tp][idt] = subCh // mapping from clientID to channel
 	s.smu.Unlock()
-	err := supplyServerFunc(subCh, stream)
+	err := supplyServerFunc(subCh, stream, uint64(idt))
 	// this supply stream may closed. so take care.
 
 	s.smu.Lock()
@@ -500,9 +541,23 @@ func idToNode(id uint64) string {
 	if str, ok = nodeMap[nodeNum]; !ok {
 		str = sxutil.GetNodeName(nodeNum)
 	}
+	log.Printf("%v Subscr Error", str)
 	rs := strings.Replace(str, "Provider", "", -1)
 	rs2 := strings.Replace(rs, "Server", "", -1)
 	return rs2 + ":" + strconv.Itoa(nodeNum)
+}
+
+//新しく作った
+func idToNodeInfo(id uint64) *nodeapi.NodeInfo {
+	nodeNum := int(int64(id) & nodeMask >> nodeShift)  // snowflake node ID:
+	var ok bool
+	var ni *nodeapi.NodeInfo
+	if _, ok = nodeMap[nodeNum]; !ok {
+		ni = sxutil.GetNodeInfo(nodeNum)
+	}
+	log.Printf("NodeInfo: %v \n", ni)
+
+	return ni
 }
 
 func unaryServerInterceptor(logger *logrus.Logger, s *synerexServerInfo) grpc.UnaryServerInterceptor {

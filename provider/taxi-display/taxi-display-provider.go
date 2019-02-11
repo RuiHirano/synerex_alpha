@@ -27,7 +27,7 @@ func init() {
 }
 
 // callback for each Demand
-func demandCallback(clt *sxutil.SMServiceClient, dm *pb.Demand) {
+func demandCallback(clt *sxutil.SMServiceClient, dm *pb.Demand, id sxutil.IDType) {
 	// check if supply is match with my demand.
 	log.Println("Got ad demand callback")
 	// choice is supply for me? or not.

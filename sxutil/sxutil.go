@@ -77,11 +77,22 @@ func InitNodeNum(n int) {
 
 func GetNodeName(n int) string {
 	ni, err := clt.QueryNode(context.Background(), &nodeapi.NodeID{NodeId: int32(n)})
+	log.Printf("getNodeName %v\n", ni)
 	if err != nil {
 		log.Printf("Error on QueryNode %v", err)
 		return "Unknown"
 	}
 	return ni.NodeName
+}
+
+func GetNodeInfo(n int) *nodeapi.NodeInfo {
+	ni, err := clt.QueryNode(context.Background(), &nodeapi.NodeID{NodeId: int32(n)})
+	log.Printf("getNodeName %v\n", ni)
+	if err != nil {
+		log.Printf("Error on QueryNode %v", err)
+		return nil
+	}
+	return ni
 }
 
 func SetNodeStatus(status int32, arg string) {
@@ -116,11 +127,29 @@ func RegisterNodeName(nodesrv string, nm string, isServ bool) error { // registe
 		return err
 	}
 	//	defer conn.Close()
-
+	log.Printf("%d isServ", isServ)
 	clt = nodeapi.NewNodeClient(conn)
+	/*th := map[string]map[string]uint64 {
+		"Price": {"TrustScore": uint64(53), "PrivateScore": uint64(23), "GroupScore": uint64(38)},
+		"Distance": {"TrustScore": uint64(23), "PrivateScore": uint64(24), "GroupScore": uint64(42)},
+		"Arrival": {"TrustScore": uint64(43), "PrivateScore": uint64(14), "GroupScore": uint64(23)},
+		"Destination": {"TrustScore": uint64(62), "PrivateScore": uint64(23), "GroupScore": uint64(33)},
+		"Position": {"TrustScore": uint64(34), "PrivateScore": uint64(43), "GroupScore": uint64(25)},
+	}*/
+	//th := map[string]uint64 {"TrustScore": uint64(0), "PrivateScore": uint64(0), "GroupScore": uint64(0)}
+	//th := [][]uint64{{23,52,64},{23,52,45},{36,73,52},{62,74,27},{34,63,88}}
+	th := uint64(73)
+	ts := uint64(73)
+	ps := uint64(35)
+	gs := uint64(42)
 	nif := nodeapi.NodeInfo{
 		NodeName: nm,
 		IsServer: isServ,
+		//NodeInfoを追加
+		TrustScore: ts,
+		PrivateScore: ps,
+		GroupScore: gs,
+		Threshold: th,
 	}
 	myNodeName = nm
 	var ee error
@@ -137,15 +166,17 @@ func RegisterNodeName(nodesrv string, nm string, isServ bool) error { // registe
 			return nderr
 		} else {
 			fmt.Println("Successfully Initialize node ", nid.NodeId)
+			fmt.Println("Successfully Initialize node ", nid.Secret)
+			fmt.Println("Successfully Initialize node ", nid.KeepaliveDuration)
 		}
 	}
 
 	nupd = &nodeapi.NodeUpdate{
 		NodeId:      nid.NodeId,
 		Secret:      nid.Secret,
-		UpdateCount: 0,
+		UpdateCount: 100,
 		NodeStatus:  0,
-		NodeArg:     "",
+		NodeArg:     "test",
 	}
 	// start keepalive goroutine
 	go startKeepAlive()
@@ -172,11 +203,13 @@ type SMServiceClient struct {
 	MbusID   IDType
 }
 
+//サーバーに送る情報を定義
 // NewSMServiceClient Creates wrapper structre SMServiceClient from SynerexClient
 func NewSMServiceClient(clt api.SynerexClient, mtype api.ChannelType, argJson string) *SMServiceClient {
 	s := &SMServiceClient{
 		ClientID: IDType(node.Generate()),
 		MType:    mtype,
+		//MType:    api.ChannelType_ROUTING_SERVICE,
 		Client:   clt,
 		ArgJson:  argJson,
 	}
@@ -330,12 +363,14 @@ func (clt *SMServiceClient) SubscribeSupply(ctx context.Context, spcb func(*SMSe
 // SubscribeDemand  Wrapper function for SMServiceClient
 func (clt *SMServiceClient) SubscribeDemand(ctx context.Context, dmcb func(*SMServiceClient, *api.Demand)) error {
 	ch := clt.getChannel()
+	log.Printf("getChannel %v\n\n", ch)
 	dmc, err := clt.Client.SubscribeDemand(ctx, ch)
 	if err != nil {
 		log.Printf("%v SubscribeDemand Error %v", clt, err)
 		return err // sender should handle error...
 	}
 	for {
+		//他プロバイダのデマンドからコールバックされる
 		var dm *api.Demand
 		dm, err = dmc.Recv() // receive Demand
 		if err != nil {
@@ -348,6 +383,7 @@ func (clt *SMServiceClient) SubscribeDemand(ctx context.Context, dmcb func(*SMSe
 		}
 		log.Println("Receive SD:",*dm)
 		// call Callback!
+		log.Printf("getChannel2 %v\n\n", clt)
 		dmcb(clt, dm)
 	}
 	return err

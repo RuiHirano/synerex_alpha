@@ -6,6 +6,7 @@ package nodeapi // import "github.com/synerex/synerex_alpha/nodeapi"
 import proto "github.com/golang/protobuf/proto"
 import fmt "fmt"
 import math "math"
+import "log"
 
 import (
 	context "golang.org/x/net/context"
@@ -26,6 +27,12 @@ const _ = proto.ProtoPackageIsVersion2 // please upgrade the proto package
 type NodeInfo struct {
 	NodeName             string   `protobuf:"bytes,1,opt,name=node_name,json=nodeName,proto3" json:"node_name,omitempty"`
 	IsServer             bool     `protobuf:"varint,2,opt,name=is_server,json=isServer,proto3" json:"is_server,omitempty"`
+  	TrustScore					 uint64		`protobuf:"varint,3,opt,name=trust_score,json=trustScore,proto3" json:"trust_score,omitempty"`
+	PrivateScore				 uint64		`protobuf:"varint,4,opt,name=private_score,json=privateScore,proto3" json:"private_score,omitempty"`
+	GroupScore					 uint64		`protobuf:"varint,5,opt,name=group_score,json=groupScore,proto3" json:"group_score,omitempty"`
+	Threshold					 uint64	`protobuf:"varint,6,opt,name=threshold,json=threshold,proto3" json:"threshold,omitempty"`
+	//Threshold					 map[string]uint64	`protobuf:"bytes,6,rep,name=threshold" json:"threshold",omitempty" protobuf_key:"bytes,7,opt,name=key" protobuf_val:"varint,8,opt,name=value"`
+	//Threshold					 map[string]map[string]uint64	`protobuf:"group,6,opt,name=threshold,json=threshold,proto3" json:"threshold,omitempty"`
 	XXX_NoUnkeyedLiteral struct{} `json:"-"`
 	XXX_unrecognized     []byte   `json:"-"`
 	XXX_sizecache        int32    `json:"-"`
@@ -62,11 +69,47 @@ func (m *NodeInfo) GetNodeName() string {
 	return ""
 }
 
+func (m *NodeInfo) GetThreshold() uint64 {//map[string]map[string]uint64 {
+	if m != nil {
+		return m.Threshold
+	}
+	/*return map[string]map[string]uint64 {
+		"Price": {"TrustScore": uint64(0), "PrivateScore": uint64(0), "GroupScore": uint64(0)},
+		"Distance": {"TrustScore": uint64(0), "PrivateScore": uint64(0), "GroupScore": uint64(0)},
+		"Arrival": {"TrustScore": uint64(0), "PrivateScore": uint64(0), "GroupScore": uint64(0)},
+		"Destination": {"TrustScore": uint64(0), "PrivateScore": uint64(0), "GroupScore": uint64(0)},
+		"Position": {"TrustScore": uint64(0), "PrivateScore": uint64(0), "GroupScore": uint64(0)},
+	}*/
+	//return map[string]uint64 {"TrustScore": uint64(0), "PrivateScore": uint64(0), "GroupScore": uint64(0)}
+	return 0
+}
+
 func (m *NodeInfo) GetIsServer() bool {
 	if m != nil {
 		return m.IsServer
 	}
 	return false
+}
+
+func (m *NodeInfo) GetTrustScore() uint64 {
+	if m != nil {
+		return m.TrustScore
+	}
+	return 0
+}
+
+func (m *NodeInfo) GetPrivateScore() uint64 {
+	if m != nil {
+		return m.PrivateScore
+	}
+	return 0
+}
+
+func (m *NodeInfo) GetGroupScore() uint64 {
+	if m != nil {
+		return m.GroupScore
+	}
+	return 0
 }
 
 type NodeID struct {
@@ -274,10 +317,13 @@ func NewNodeClient(cc *grpc.ClientConn) NodeClient {
 
 func (c *nodeClient) RegisterNode(ctx context.Context, in *NodeInfo, opts ...grpc.CallOption) (*NodeID, error) {
 	out := new(NodeID)
+	log.Printf("%d resisternode", in)
+	log.Printf("%d out\n", out)
 	err := c.cc.Invoke(ctx, "/nodeapi.Node/RegisterNode", in, out, opts...)
 	if err != nil {
 		return nil, err
 	}
+	log.Printf("%d out2\n", out)
 	return out, nil
 }
 
@@ -287,6 +333,7 @@ func (c *nodeClient) QueryNode(ctx context.Context, in *NodeID, opts ...grpc.Cal
 	if err != nil {
 		return nil, err
 	}
+	log.Printf("%d QueryNode", out.IsServer)
 	return out, nil
 }
 

@@ -28,7 +28,7 @@ var (
 	feedName      = flag.String("feed", "", "GTFS Feed Filename")
 )
 
-func demandPTCallback(clt *sxutil.SMServiceClient, sp *api.Demand) {
+func demandPTCallback(clt *sxutil.SMServiceClient, sp *api.Demand, id sxutil.IDType) {
  sp.GetArg_PTService()
 }
 

@@ -66,7 +66,7 @@ func adDemandCallback(clt *sxutil.SMServiceClient, dm *pb.Demand) {
 }
 
 // callback for each Demand
-func rideDemandCallback(clt *sxutil.SMServiceClient, dm *pb.Demand) {
+func rideDemandCallback(clt *sxutil.SMServiceClient, dm *pb.Demand, id sxutil.IDType) {
 	// check if supply is match with my demand.
 	log.Println("Got rideshare demand callback")
 

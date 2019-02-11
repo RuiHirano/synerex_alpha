@@ -38,6 +38,10 @@ const DefaultDuration int32 = 10   // need keepalive for each 10 sec.
 const MaxDurationCount = 3   // duration count.
 
 type eachNodeInfo struct {
+	trustScore uint64
+	privateScore uint64
+	groupScore uint64
+	threshold uint64//map[string]map[string]uint64
 	nodeName string
 	secret   uint64
 	address  string
@@ -154,13 +158,16 @@ func (s *srvNodeInfo) RegisterNode(cx context.Context, ni *nodepb.NodeInfo) (nid
 		ipaddr = "0.0.0.0"
 	}
 	eni := eachNodeInfo{
+		trustScore: ni.TrustScore,
+		privateScore: ni.PrivateScore,
+		groupScore: ni.GroupScore,
 		nodeName: ni.NodeName,
+		threshold: ni.Threshold,
 		secret:   r,
 		address:  ipaddr,
 		lastAlive: time.Now(),
 		duration: DefaultDuration,
 	}
-	log.Println("Node Connection from :", ipaddr, ",", ni.NodeName)
 	s.nodeMap[n] = &eni
 	log.Println("------------------------------------------------------")
 	s.listNodes()
@@ -176,9 +183,11 @@ func (s *srvNodeInfo) QueryNode(cx context.Context, nid *nodepb.NodeID) (ni *nod
 		fmt.Println("QueryNode: Can't find Node ID:",n)
 		return nil, errors.New("Unregistered NodeID")
 	}
-	ni = &nodepb.NodeInfo{NodeName: eni.nodeName}
+	log.Printf("%v trustScore", eni.trustScore)
+	ni = &nodepb.NodeInfo{NodeName: eni.nodeName, TrustScore: eni.trustScore, PrivateScore: eni.privateScore, GroupScore: eni.groupScore, Threshold: eni.threshold}
 	return ni, nil
 }
+
 
 func (s *srvNodeInfo) KeepAlive(ctx context.Context, nu *nodepb.NodeUpdate) (nr *nodepb.Response, e error) {
 	nid := nu.NodeId

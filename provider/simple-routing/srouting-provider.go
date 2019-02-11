@@ -77,7 +77,7 @@ func calcDistance(pts [][2]float64) float64{
 }
 
 // callback for each Demand
-func routingDemandCallback(clt *sxutil.SMServiceClient, dm *api.Demand) {
+func routingDemandCallback(clt *sxutil.SMServiceClient, dm *api.Demand, id sxutil.IDType) {
 	MeterPerSoconds := float64(30 * 1000 / 3600)  // meter per seconds
 	// check if demand is match with my supply.
 	log.Println("Got routing demand callback on SRouting")
