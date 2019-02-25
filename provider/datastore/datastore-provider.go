@@ -55,7 +55,7 @@ type FileSystemDataStore struct{
 func (fs *FileSystemDataStore)store(li *LocInfo){
 	const layout = "2006-01-02"
 	day := time.Now()
-	todayStr := day.Format(layout)+".json"
+	todayStr := day.Format(layout)+".csv"
 	if fs.todayStr != "" && fs.todayStr != todayStr {
 		fs.storeFile.Close()
 		fs.storeFile = nil
@@ -77,7 +77,7 @@ func (fs *FileSystemDataStore)store(li *LocInfo){
 		}
 		fs.storeFile =file
 	}
-	fs.storeFile.WriteString("["+li.GetJson()+"],\n")
+	fs.storeFile.WriteString(li.argJson+"\n")
 }
 
 type LocInfo struct {
