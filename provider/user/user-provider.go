@@ -23,6 +23,8 @@ var (
 	spMap		map[uint64]*pb.Supply
 	selection 	bool
 	mu	sync.Mutex
+	t_start time.Time
+	t_finish time.Time
 )
 
 func init() {
@@ -48,6 +50,9 @@ type TaxiDemand struct {
 // this function waits
 func startSelection(clt *sxutil.SMServiceClient,d time.Duration){
 	var sid uint64
+	t_finish = time.Now()
+	duration_if := t_finish.Sub(t_start)
+	fmt.Println("bit time: %d\n\n ",duration_if)
 
 	for i := 0; i < 5; i++{
 		time.Sleep(d / 5)
@@ -69,14 +74,18 @@ func startSelection(clt *sxutil.SMServiceClient,d time.Duration){
 		}
 	}
 	mu.Unlock()
-	log.Printf("Select supply %v", spMap[sid])
+	//log.Printf("Select supply %v", spMap[sid])
 	clt.SelectSupply(spMap[sid])
+	log.Printf("Got Comfirm!!\n\n")
+
+
 	// we have to cleanup all info.
 }
 
 // callback for each Supply
 func supplyCallback(clt *sxutil.SMServiceClient, sp *pb.Supply) {
 	// check if supply is match with my demand.
+	//ここまでの時間
 	log.Println("Got Ride_Share supply callback")
 	// choice is supply for me? or not.
 	mu.Lock()
@@ -85,8 +94,8 @@ func supplyCallback(clt *sxutil.SMServiceClient, sp *pb.Supply) {
 		// this is not good..
 //		clt.SelectSupply(sp)
 		// just show the supply Information
-		opts :=	dmMap[sp.TargetId]
-		log.Printf("Got Supply for %v as '%v'",opts, sp )
+		//opts :=	dmMap[sp.TargetId]
+		//log.Printf("Got Supply for %v as '%v'",opts, sp )
 		spMap[sp.TargetId] = sp
 		// should wait several seconds to find the best proposal.
 		// if there is no selection .. lets start
@@ -112,17 +121,25 @@ func subscribeSupply(client *sxutil.SMServiceClient) {
 func sendDemand(sclient *sxutil.SMServiceClient, nm string, js string) {
 	opts := &sxutil.DemandOpts{Name: nm, JSON: js}
 	mu.Lock()
-	id := sclient.RegisterDemand(opts)
+	id := sclient.RegisterDemand(opts, t_start)
 	idlist = append(idlist, id) // my demand list
 	dmMap[id] = opts            // my demand options
 	mu.Unlock()
-	log.Printf("Register my demand as id %v, %v",id,idlist)
+	//log.Printf("Register my demand as id %v, %v",id,idlist)
+}
+
+func threshold() string{
+
+	return `{"Destination": {"TrustScore": 62, "PrivateScore": 23, "GroupScore": 33}, "Duration": {"TrustScore": 34, "PrivateScore": 43, "GroupScore": 25}}`
+
 }
 
 func main() {
+	log.Printf("Start!!\n\n")
+	t_start = time.Now()
 	flag.Parse()
 
-	sxutil.RegisterNodeName(*nodesrv, "UserProvider", false)
+	sxutil.RegisterNodeName(*nodesrv, "UserProvider", false, threshold(), t_start)
 
 	go sxutil.HandleSigInt()
 	sxutil.RegisterDeferFunction(sxutil.UnRegisterNode)
@@ -146,7 +163,7 @@ func main() {
 	go subscribeSupply(sclient)
 
 	for {
-		sendDemand(sclient, "Share Ride to Home", "{Destination:{Latitude:36.5, Longitude:135.6}, Duration: 1200}")
+		sendDemand(sclient, "Share Ride to Home", `{"Destination": {"Latitude": 36.5, "Longitude": 135.6}, "Duration": 1200}`)
 		time.Sleep(time.Second * time.Duration(10 + rand.Int()%10))
 	}
 	wg.Wait()

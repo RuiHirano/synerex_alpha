@@ -41,7 +41,12 @@ type eachNodeInfo struct {
 	trustScore uint64
 	privateScore uint64
 	groupScore uint64
-	threshold uint64//map[string]map[string]uint64
+	threshold string//map[string]map[string]uint64
+	performanceTest []uint64
+	performanceTest2 []uint64
+	performanceTest3 []uint64
+	performanceTest4 []uint64
+	startTime int64
 	nodeName string
 	secret   uint64
 	address  string
@@ -163,6 +168,11 @@ func (s *srvNodeInfo) RegisterNode(cx context.Context, ni *nodepb.NodeInfo) (nid
 		groupScore: ni.GroupScore,
 		nodeName: ni.NodeName,
 		threshold: ni.Threshold,
+		performanceTest: ni.PerformanceTest,
+		performanceTest2: ni.PerformanceTest2,
+		performanceTest3: ni.PerformanceTest3,
+		performanceTest4: ni.PerformanceTest4,
+		startTime: ni.StartTime,
 		secret:   r,
 		address:  ipaddr,
 		lastAlive: time.Now(),
@@ -183,8 +193,8 @@ func (s *srvNodeInfo) QueryNode(cx context.Context, nid *nodepb.NodeID) (ni *nod
 		fmt.Println("QueryNode: Can't find Node ID:",n)
 		return nil, errors.New("Unregistered NodeID")
 	}
-	log.Printf("%v trustScore", eni.trustScore)
-	ni = &nodepb.NodeInfo{NodeName: eni.nodeName, TrustScore: eni.trustScore, PrivateScore: eni.privateScore, GroupScore: eni.groupScore, Threshold: eni.threshold}
+	//log.Printf("%v trustScore", eni.trustScore)
+	ni = &nodepb.NodeInfo{NodeName: eni.nodeName, TrustScore: eni.trustScore, PrivateScore: eni.privateScore, GroupScore: eni.groupScore, Threshold: eni.threshold, StartTime: eni.startTime}
 	return ni, nil
 }
 

@@ -77,7 +77,7 @@ func InitNodeNum(n int) {
 
 func GetNodeName(n int) string {
 	ni, err := clt.QueryNode(context.Background(), &nodeapi.NodeID{NodeId: int32(n)})
-	log.Printf("getNodeName %v\n", ni)
+	//log.Printf("getNodeName %v\n", ni)
 	if err != nil {
 		log.Printf("Error on QueryNode %v", err)
 		return "Unknown"
@@ -87,7 +87,7 @@ func GetNodeName(n int) string {
 
 func GetNodeInfo(n int) *nodeapi.NodeInfo {
 	ni, err := clt.QueryNode(context.Background(), &nodeapi.NodeID{NodeId: int32(n)})
-	log.Printf("getNodeName %v\n", ni)
+	//log.Printf("getNodeName %v\n", ni)
 	if err != nil {
 		log.Printf("Error on QueryNode %v", err)
 		return nil
@@ -117,7 +117,7 @@ func startKeepAlive() {
 }
 
 // RegisterNodeName is a function to register node name with node server address
-func RegisterNodeName(nodesrv string, nm string, isServ bool) error { // register ID to server
+func RegisterNodeName(nodesrv string, nm string, isServ bool, th string, st time.Time) error { // register ID to server
 	var opts []grpc.DialOption
 	opts = append(opts, grpc.WithInsecure()) // insecure
 	var err error
@@ -127,7 +127,7 @@ func RegisterNodeName(nodesrv string, nm string, isServ bool) error { // registe
 		return err
 	}
 	//	defer conn.Close()
-	log.Printf("%d isServ", isServ)
+	//log.Printf("%d isServ", isServ)
 	clt = nodeapi.NewNodeClient(conn)
 	/*th := map[string]map[string]uint64 {
 		"Price": {"TrustScore": uint64(53), "PrivateScore": uint64(23), "GroupScore": uint64(38)},
@@ -138,10 +138,14 @@ func RegisterNodeName(nodesrv string, nm string, isServ bool) error { // registe
 	}*/
 	//th := map[string]uint64 {"TrustScore": uint64(0), "PrivateScore": uint64(0), "GroupScore": uint64(0)}
 	//th := [][]uint64{{23,52,64},{23,52,45},{36,73,52},{62,74,27},{34,63,88}}
-	th := uint64(73)
 	ts := uint64(73)
 	ps := uint64(35)
-	gs := uint64(42)
+	gs := uint64(30)
+	pt := make([]uint64,20)
+	pt2 := make([]uint64,0)
+	pt3 := make([]uint64,0)
+	pt4 := make([]uint64,0)
+	//log.Println(pt)
 	nif := nodeapi.NodeInfo{
 		NodeName: nm,
 		IsServer: isServ,
@@ -150,6 +154,11 @@ func RegisterNodeName(nodesrv string, nm string, isServ bool) error { // registe
 		PrivateScore: ps,
 		GroupScore: gs,
 		Threshold: th,
+		PerformanceTest: pt,
+		PerformanceTest2: pt2,
+		PerformanceTest3: pt3,
+		PerformanceTest4: pt4,
+		StartTime: int64(st.Day()),
 	}
 	myNodeName = nm
 	var ee error
@@ -166,8 +175,8 @@ func RegisterNodeName(nodesrv string, nm string, isServ bool) error { // registe
 			return nderr
 		} else {
 			fmt.Println("Successfully Initialize node ", nid.NodeId)
-			fmt.Println("Successfully Initialize node ", nid.Secret)
-			fmt.Println("Successfully Initialize node ", nid.KeepaliveDuration)
+			//fmt.Println("Successfully Initialize node ", nid.Secret)
+			//fmt.Println("Successfully Initialize node ", nid.KeepaliveDuration)
 		}
 	}
 
@@ -353,7 +362,7 @@ func (clt *SMServiceClient) SubscribeSupply(ctx context.Context, spcb func(*SMSe
 			}
 			break
 		}
-		log.Println("Receive SS:", *sp)
+		//log.Println("Receive SS:", *sp)
 		// call Callback!
 		spcb(clt, sp)
 	}
@@ -363,7 +372,7 @@ func (clt *SMServiceClient) SubscribeSupply(ctx context.Context, spcb func(*SMSe
 // SubscribeDemand  Wrapper function for SMServiceClient
 func (clt *SMServiceClient) SubscribeDemand(ctx context.Context, dmcb func(*SMServiceClient, *api.Demand)) error {
 	ch := clt.getChannel()
-	log.Printf("getChannel %v\n\n", ch)
+	//log.Printf("getChannel %v\n\n", ch)
 	dmc, err := clt.Client.SubscribeDemand(ctx, ch)
 	if err != nil {
 		log.Printf("%v SubscribeDemand Error %v", clt, err)
@@ -381,9 +390,9 @@ func (clt *SMServiceClient) SubscribeDemand(ctx context.Context, dmcb func(*SMSe
 			}
 			break
 		}
-		log.Println("Receive SD:",*dm)
+		//log.Println("Receive SD:",*dm)
 		// call Callback!
-		log.Printf("getChannel2 %v\n\n", clt)
+		//log.Printf("getChannel2 %v\n\n", clt)
 		dmcb(clt, dm)
 	}
 	return err
@@ -448,7 +457,7 @@ func (clt *SMServiceClient) CloseMbus(ctx context.Context) error {
 }
 
 // RegisterDemand sends Typed Demand to Server
-func (clt *SMServiceClient) RegisterDemand(dmo *DemandOpts) uint64 {
+func (clt *SMServiceClient) RegisterDemand(dmo *DemandOpts, time2 time.Time) uint64 {
 	id := GenerateIntID()
 	ts := ptypes.TimestampNow()
 	dm := api.Demand{

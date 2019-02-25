@@ -46,7 +46,7 @@ func demandCallback(clt *sxutil.SMServiceClient, dm *pb.Demand) {
 		// select any ride share demand!
 		// should check the type of ride..
 
-		log.Printf("Providerr dm %v\n", uint64(clt.ClientID))
+		log.Printf("Provider dm %v\n", dm.GetId())
 		// create dummy fleet
 		fleet := fleet.Fleet{
 			VehicleId: int32(10),
@@ -68,7 +68,7 @@ func demandCallback(clt *sxutil.SMServiceClient, dm *pb.Demand) {
 		} // set TargetID as Demand.Id (User will check by them)
 
 		mu.Lock()
-		log.Printf("Taxi SPaa ID %v\n\n", sp.ID)
+		//log.Printf("Taxi SPaa ID %v\n\n", sp.ID)
 		pid := clt.ProposeSupply(sp)
 		idlist = append(idlist,pid)
 		spMap[pid] = sp
@@ -97,9 +97,15 @@ func oldproposeSupply(client pb.SynerexClient, targetNum uint64) {
 
 }
 
+func threshold() string{
+
+	return `{"Price": {"TrustScore": 53, "PrivateScore": 23, "GroupScore": 38}, "Distance": {"TrustScore": 23, "PrivateScore": 24, "GroupScore": 42}, "Arrival": {"TrustScore": 43, "PrivateScore": 14, "GroupScore": 23}, "Destination": {"TrustScore": 62, "PrivateScore": 23, "GroupScore": 33}, "Position": {"TrustScore": 34, "PrivateScore": 43, "GroupScore": 25}}`
+
+}
+
 func main() {
 	flag.Parse()
-	sxutil.RegisterNodeName(*nodesrv, "TaxiProvider", true)
+	sxutil.RegisterNodeName(*nodesrv, "TaxiProvider", true, threshold(), time.Time{})
 
 	go sxutil.HandleSigInt()
 	sxutil.RegisterDeferFunction(sxutil.UnRegisterNode)

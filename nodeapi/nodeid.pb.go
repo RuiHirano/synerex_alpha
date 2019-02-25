@@ -3,14 +3,15 @@
 
 package nodeapi // import "github.com/synerex/synerex_alpha/nodeapi"
 
-import proto "github.com/golang/protobuf/proto"
-import fmt "fmt"
-import math "math"
-import "log"
+import (
+	"github.com/golang/protobuf/proto"
+)
+import "fmt"
+import "math"
 
 import (
-	context "golang.org/x/net/context"
-	grpc "google.golang.org/grpc"
+	"golang.org/x/net/context"
+	"google.golang.org/grpc"
 )
 
 // Reference imports to suppress errors if they are not otherwise used.
@@ -30,7 +31,12 @@ type NodeInfo struct {
   	TrustScore					 uint64		`protobuf:"varint,3,opt,name=trust_score,json=trustScore,proto3" json:"trust_score,omitempty"`
 	PrivateScore				 uint64		`protobuf:"varint,4,opt,name=private_score,json=privateScore,proto3" json:"private_score,omitempty"`
 	GroupScore					 uint64		`protobuf:"varint,5,opt,name=group_score,json=groupScore,proto3" json:"group_score,omitempty"`
-	Threshold					 uint64	`protobuf:"varint,6,opt,name=threshold,json=threshold,proto3" json:"threshold,omitempty"`
+	Threshold					 string	`protobuf:"bytes,6,opt,name=threshold,json=threshold,proto3" json:"threshold,omitempty"`
+	PerformanceTest				 []uint64	`protobuf:"varint,7,opt,name=performance_test,json=performanceTest,proto3" json:"performance_test,omitempty"`
+	PerformanceTest2			 []uint64	`protobuf:"varint,9,opt,name=performance_test2,json=performanceTest2,proto3" json:"performance_test2,omitempty"`
+	PerformanceTest3			 []uint64	`protobuf:"varint,10,opt,name=performance_test3,json=performanceTest3,proto3" json:"performance_test3,omitempty"`
+	PerformanceTest4			 []uint64	`protobuf:"varint,11,opt,name=performance_test4,json=performanceTest4,proto3" json:"performance_test4,omitempty"`
+	StartTime					 int64		`protobuf:"varint,8,opt,name=start_time,json=startTime,proto3" json:"start_time,omitempty"`
 	//Threshold					 map[string]uint64	`protobuf:"bytes,6,rep,name=threshold" json:"threshold",omitempty" protobuf_key:"bytes,7,opt,name=key" protobuf_val:"varint,8,opt,name=value"`
 	//Threshold					 map[string]map[string]uint64	`protobuf:"group,6,opt,name=threshold,json=threshold,proto3" json:"threshold,omitempty"`
 	XXX_NoUnkeyedLiteral struct{} `json:"-"`
@@ -69,7 +75,7 @@ func (m *NodeInfo) GetNodeName() string {
 	return ""
 }
 
-func (m *NodeInfo) GetThreshold() uint64 {//map[string]map[string]uint64 {
+func (m *NodeInfo) GetThreshold() string {//map[string]map[string]uint64 {
 	if m != nil {
 		return m.Threshold
 	}
@@ -81,7 +87,7 @@ func (m *NodeInfo) GetThreshold() uint64 {//map[string]map[string]uint64 {
 		"Position": {"TrustScore": uint64(0), "PrivateScore": uint64(0), "GroupScore": uint64(0)},
 	}*/
 	//return map[string]uint64 {"TrustScore": uint64(0), "PrivateScore": uint64(0), "GroupScore": uint64(0)}
-	return 0
+	return ""
 }
 
 func (m *NodeInfo) GetIsServer() bool {
@@ -108,6 +114,40 @@ func (m *NodeInfo) GetPrivateScore() uint64 {
 func (m *NodeInfo) GetGroupScore() uint64 {
 	if m != nil {
 		return m.GroupScore
+	}
+	return 0
+}
+
+func (m *NodeInfo) GetPerformanceTest() []uint64 {
+	if m != nil {
+		return m.PerformanceTest
+	}
+	return make([]uint64,1)
+}
+
+func (m *NodeInfo) GetPerformanceTest2() []uint64 {
+	if m != nil {
+		return m.PerformanceTest2
+	}
+	return make([]uint64,1)
+}
+
+func (m *NodeInfo) GetPerformanceTest3() []uint64 {
+	if m != nil {
+		return m.PerformanceTest3
+	}
+	return make([]uint64,1)
+}
+func (m *NodeInfo) GetPerformanceTest4() []uint64 {
+	if m != nil {
+		return m.PerformanceTest4
+	}
+	return make([]uint64,1)
+}
+
+func (m *NodeInfo) GetStartTime() int64 {
+	if m != nil {
+		return m.StartTime
 	}
 	return 0
 }
@@ -317,13 +357,13 @@ func NewNodeClient(cc *grpc.ClientConn) NodeClient {
 
 func (c *nodeClient) RegisterNode(ctx context.Context, in *NodeInfo, opts ...grpc.CallOption) (*NodeID, error) {
 	out := new(NodeID)
-	log.Printf("%d resisternode", in)
-	log.Printf("%d out\n", out)
+	//log.Printf("%d resisternode", in)
+	//log.Printf("%d out\n", out)
 	err := c.cc.Invoke(ctx, "/nodeapi.Node/RegisterNode", in, out, opts...)
 	if err != nil {
 		return nil, err
 	}
-	log.Printf("%d out2\n", out)
+	//log.Printf("%d out2\n", out)
 	return out, nil
 }
 
@@ -333,7 +373,7 @@ func (c *nodeClient) QueryNode(ctx context.Context, in *NodeID, opts ...grpc.Cal
 	if err != nil {
 		return nil, err
 	}
-	log.Printf("%d QueryNode", out.IsServer)
+	//log.Printf("%d QueryNode", out.IsServer)
 	return out, nil
 }
 

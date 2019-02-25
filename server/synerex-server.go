@@ -13,6 +13,7 @@ package main
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"flag"
 	"fmt"
@@ -25,7 +26,6 @@ import (
 	"time"
 
 	//"strconv"
-	"../filter"
 	"github.com/sirupsen/logrus"
 	"github.com/synerex/synerex_alpha/api"
 	"github.com/synerex/synerex_alpha/monitor/monitorapi"
@@ -40,6 +40,8 @@ var (
 	port    = flag.Int("port", 10000, "The Synerex Server Listening Port")
 	nodesrv = flag.String("nodesrv", "127.0.0.1:9990", "Node ID Server")
 	monitor = flag.String("monitor", "127.0.0.1:9998", "Monitor Server")
+	t_start time.Time
+	t_finish time.Time
 )
 
 type synerexServerInfo struct {
@@ -62,7 +64,7 @@ func init() {
 func (s *synerexServerInfo) RegisterDemand(c context.Context, dm *api.Demand) (r *api.Response, e error) {
 	// send demand for desired channels
 	fmt.Printf("Register Demand!!!")
-	fmt.Printf("RD Message")
+	//fmt.Printf("RD Message")
 	okFlag := true
 	okMsg := ""
 	s.dmu.RLock()
@@ -70,6 +72,7 @@ func (s *synerexServerInfo) RegisterDemand(c context.Context, dm *api.Demand) (r
 	for i := range chs {
 		ch := chs[i]
 		if len(ch) < MessageChannelBufferSize {
+			t_start = time.Now()
 			ch <- dm
 		} else {
 			okMsg = fmt.Sprintf("RD MessageDrop %v", dm)
@@ -118,7 +121,7 @@ func (s *synerexServerInfo) ProposeDemand(c context.Context, dm *api.Demand) (r 
 		} else {
 			okMsg = fmt.Sprintf("PD MessageDrop %v", dm)
 			okFlag = false
-			log.Printf("PD MessageDrop %v\n", dm)
+			//log.Printf("PD MessageDrop %v\n", dm)
 		}
 	}
 	s.dmu.RUnlock()
@@ -126,22 +129,22 @@ func (s *synerexServerInfo) ProposeDemand(c context.Context, dm *api.Demand) (r 
 	return r, nil
 }
 func (s *synerexServerInfo) ProposeSupply(c context.Context, sp *api.Supply) (r *api.Response, e error) {
-	log.Printf("PS MessageDroop %v\n", sp)
+	//log.Printf("PS MessageDroop %v\n", sp)
 	okFlag := true
 	okMsg := ""
 	s.smu.RLock()
 	chs := s.supplyChans[sp.GetType()]
-	log.Printf("sp_type: %v\n", sp.GetType())
-	log.Printf("chs %v\n", chs)
+	//log.Printf("sp_type: %v\n", sp.GetType())
+	//log.Printf("chs %v\n", chs)
 	for i := range chs {
 		ch := chs[i]
 		if len(ch) < MessageChannelBufferSize {
-			log.Printf("Taxi ProSP %v", sp)
+			//log.Printf("Taxi ProSP %v", sp)
 			ch <- sp
 		} else {
 			okMsg = fmt.Sprintf("PS MessageDrop %v", sp)
 			okFlag = false
-			log.Printf("PS MessageDrop %v\n", sp)
+			//log.Printf("PS MessageDrop %v\n", sp)
 		}
 	}
 	s.smu.RUnlock()
@@ -245,14 +248,128 @@ func (s *synerexServerInfo) Confirm(c context.Context, tg *api.Target) (r *api.R
 	return r, nil
 }
 
+type AllThreshold struct {
+	TT TaxiThreshold
+	UT UserThreshold
+}
+
+type AllJson struct {
+	TJ TaxiArgJson
+	UJ UserArgJson
+}
+
+type TrustInfo struct {
+	TrustScore uint64 `json:"TrustScore"`
+	PrivateScore uint64 `json:"PrivateScore"`
+	GroupScore uint64 `json:"GroupScore"`
+}
+
+type TaxiThreshold struct {
+	Price TrustInfo `json:"Price"`
+	Distance TrustInfo `json:"Distance"`
+	Arrival TrustInfo `json:"Arrival"`
+	Destination TrustInfo `json:"Destination"`
+	Position TrustInfo `json:"Position"`
+}
+
+type LatLong struct {
+	Latitude float64 `json:"Latitude"`
+	Longitude float64 `json:"Longitude"`
+}
+type TaxiArgJson struct {
+	Price uint64 `json:"Price"`
+	Distance uint64 `json:"Distance"`
+	Arrival uint64 `json:"Arrival"`
+	Destination uint64 `json:"Destination"`
+	Position LatLong `json:"Position"`
+}
+//閾値をjson化
+func taxiStringToJson(taxiJsonStr string) *TaxiThreshold{
+	jsonBytes := ([]byte)(taxiJsonStr)
+	data := new(TaxiThreshold)
+
+	if err := json.Unmarshal(jsonBytes, data); err != nil {
+		fmt.Println("JSON Unmarshal error:", err)
+		return nil
+	}
+	return data
+}
+//ArgJsonをjson化
+func taxiInfoStringToJson(taxiJsonStr string) *TaxiArgJson{
+	jsonBytes := ([]byte)(taxiJsonStr)
+	data := new(TaxiArgJson)
+
+	if err := json.Unmarshal(jsonBytes, data); err != nil {
+		fmt.Println("JSON Unmarshal error:", err)
+		return nil
+	}
+	return data
+}
+
+type UserArgJson struct {
+	Destination LatLong `json:"Destination"`
+	Duration uint64 `json:"Duration"`
+}
+
+type UserThreshold struct {
+	Destination TrustInfo `json:"Destination"`
+	Duration TrustInfo `json:"Duration"`
+}
+//閾値をjson化
+func userStringToJson(userJsonStr string) *UserThreshold{
+	jsonBytes := ([]byte)(userJsonStr)
+	data := new(UserThreshold)
+
+	if err := json.Unmarshal(jsonBytes, data); err != nil {
+		fmt.Println("JSON Unmarshal error:", err)
+		return nil
+	}
+	return data
+}
+//ArgJsonをjson化
+func userInfoStringToJson(userJsonStr string) *UserArgJson{
+	jsonBytes := ([]byte)(userJsonStr)
+	data := new(UserArgJson)
+
+	if err := json.Unmarshal(jsonBytes, data); err != nil {
+		fmt.Println("JSON Unmarshal error:", err)
+		return nil
+	}
+	return data
+}
+
 // go routine which wait demand channel and sending demands to each providers.
-func demandServerFunc(ch chan *api.Demand, stream api.Synerex_SubscribeDemandServer) error {
-	log.Printf("demandServerFFFunc!!\n")
+func demandServerFunc(ch chan *api.Demand, stream api.Synerex_SubscribeDemandServer, id uint64) error {
+	log.Printf("demandServerFunc!!\n")
 	for {
 		select {
 		case dm := <-ch: // may block until receiving info
+			t_finish = time.Now()
+			duration_if := t_finish.Sub(t_start)
+			fmt.Printf("transmission time: %f\n\n ",duration_if)
+			//selspでないとき最初のregidmのときのみ
+			if dm.ArgJson != "" {
+				//log.Printf("Taxi SP ID %v\n\n", dm.ArgJson)
+				userId := dm.Id
+				userNodeInfo := idToNodeInfo(uint64(userId))
+				taxiId := id
+				taxiNodeInfo := idToNodeInfo(uint64(taxiId))
+				//log.Printf("taxi id is:  %v\n\n", taxiId)
+				//log.Printf("taxi node info is:  %v\n\n", taxiNodeInfo)
+				//log.Printf("user id is:  %v\n\n", dm.ArgJson)
+				log.Printf("user node info is:  %v\n\n", userNodeInfo)
 
-			log.Printf("demandServerFunc dm %v\n", dm)
+				score := TrustInfo{TrustScore: taxiNodeInfo.TrustScore, PrivateScore: taxiNodeInfo.PrivateScore, GroupScore: taxiNodeInfo.GroupScore}
+				threshold := userStringToJson(userNodeInfo.Threshold)
+				argJson := userInfoStringToJson(dm.ArgJson)
+				//log.Printf("demandServerFunc:  \n\n")
+				dm.ArgJson = bit_cal(AllJson{UJ: *argJson}, score, AllThreshold{UT: *threshold}, true)
+				//log.Printf("Taxi Data %v\n\n", bit_cal(argJson, score, threshold))
+				//log.Printf("Taxi ArgJson %v\n\n", threshold)
+			}
+			t_finish = time.Now()
+			duration_if = t_finish.Sub(t_start)
+			fmt.Println("all time: %f\n\n ",duration_if)
 			//コールバックに送る.idも一緒に送る
 			err := stream.Send(dm)
 
@@ -260,6 +377,7 @@ func demandServerFunc(ch chan *api.Demand, stream api.Synerex_SubscribeDemandSer
 				//				log.Printf("Error in DemandServer Error %v", err)
 				return err
 			}
+
 		}
 	}
 }
@@ -310,16 +428,16 @@ func (s *synerexServerInfo) SubscribeDemand(ch *api.Channel, stream api.Synerex_
 	s.demandChans[tp] = append(s.demandChans[tp], subCh)
 	s.demandMap[tp][idt] = subCh // mapping from clientID to channel
 	s.dmu.Unlock()
-	log.Printf("NodeInfo: %v \n", idToNodeInfo(uint64(idt)))
-	demandServerFunc(subCh, stream) // infinite go routine?
+	//log.Printf("NodeInfo: %v \n", idToNodeInfo(uint64(idt)))
+	err := demandServerFunc(subCh, stream, uint64(idt)) // infinite go routine?
 	// if this returns, stream might be closed.
 	// we should remove channel
 	s.dmu.Lock()
 	delete(s.demandMap[tp], idt) // remove map from idt
 	s.demandChans[tp] = removeDemandChannelFromSlice(s.demandChans[tp], subCh)
-	log.Printf("Remove Demand Stream Channel %v", ch)
+	//log.Printf("Remove Demand Stream Channel %v", ch)
 	s.dmu.Unlock()
-	return nil
+	return err
 }
 
 // This function is created for each subscribed provider
@@ -328,25 +446,24 @@ func supplyServerFunc(ch chan *api.Supply, stream api.Synerex_SubscribeSupplySer
 	for {
 		select {
 		case sp := <-ch:
-			log.Printf("Taxi SP ID %v\n\n", sp)
+			//log.Printf("Taxi SP ID %v\n\n", sp.ArgJson)
 			taxiId := sp.Id
 			taxiNodeInfo := idToNodeInfo(uint64(taxiId))
 			userId := id
 			userNodeInfo := idToNodeInfo(uint64(userId))
-			log.Printf("taxi id is:  %v\n\n", taxiId)
-			log.Printf("taxi node info is:  %v\n\n", taxiNodeInfo)
-			log.Printf("user id is:  %v\n\n", userId)
-			log.Printf("user node info is:  %v\n\n", userNodeInfo)
-			score := map[string]uint64{"TrustScore": userNodeInfo.TrustScore, "PrivateScore": userNodeInfo.PrivateTrust, "GroupTrust": userNodeInfo.GroupTrust}
-			threshold := map[string]map[string]uint64 {
-				"Price": {"TrustScore": uint64(53), "PrivateScore": uint64(23), "GroupScore": uint64(38)},
-				"Distance": {"TrustScore": uint64(23), "PrivateScore": uint64(24), "GroupScore": uint64(42)},
-				"Arrival": {"TrustScore": uint64(43), "PrivateScore": uint64(14), "GroupScore": uint64(23)},
-				"Destination": {"TrustScore": uint64(62), "PrivateScore": uint64(23), "GroupScore": uint64(33)},
-				"Position": {"TrustScore": uint64(34), "PrivateScore": uint64(43), "GroupScore": uint64(25)},
-			}
-			sp.JSON = filter.bit_cal(sp.JSON, score, threshold)
-			log.Printf("Taxi SP ID2 %v\n\n", sp)
+			//log.Printf("taxi id is:  %v\n\n", taxiId)
+			//log.Printf("taxi node info is:  %v\n\n", taxiNodeInfo)
+			//log.Printf("user id is:  %v\n\n", userId)
+			//log.Printf("user node info is:  %v\n\n", userNodeInfo)
+
+			score := TrustInfo{TrustScore: userNodeInfo.TrustScore, PrivateScore: userNodeInfo.PrivateScore, GroupScore: userNodeInfo.GroupScore}
+			threshold := taxiStringToJson(taxiNodeInfo.Threshold)
+			argJson := taxiInfoStringToJson(sp.ArgJson)
+			log.Printf("supplyServerFunc:  \n\n")
+
+			sp.ArgJson = bit_cal(AllJson{TJ: *argJson}, score, AllThreshold{TT:*threshold}, false)
+			//log.Printf("Taxi Data %v\n\n", bit_cal(argJson, score, threshold))
+			//log.Printf("Taxi ArgJson %v\n\n", sp.ArgJson)
 			okFlg := true
 			if okFlg {
 				err := stream.Send(sp)
@@ -378,7 +495,7 @@ func (s *synerexServerInfo) SubscribeSupply(ch *api.Channel, stream api.Synerex_
 	monitorapi.SendMessage("SubscribeSupply", int(ch.Type),0, ch.ClientId, 0,0, ch.ArgJson)
 
 	s.smu.Lock()
-	log.Printf("sp_type, tp: %v\n", ch.GetType())
+	//log.Printf("sp_type, tp: %v\n", ch.GetType())
 	s.supplyChans[tp] = append(s.supplyChans[tp], subCh)
 	s.supplyMap[tp][idt] = subCh // mapping from clientID to channel
 	s.smu.Unlock()
@@ -388,7 +505,7 @@ func (s *synerexServerInfo) SubscribeSupply(ch *api.Channel, stream api.Synerex_
 	s.smu.Lock()
 	delete(s.supplyMap[tp], idt) // remove map from idt
 	s.supplyChans[tp] = removeSupplyChannelFromSlice(s.supplyChans[tp], subCh)
-	log.Printf("Remove Supply Stream Channel %v", ch)
+	//log.Printf("Remove Supply Stream Channel %v", ch)
 	s.smu.Unlock()
 
 	return err
@@ -555,7 +672,7 @@ func idToNodeInfo(id uint64) *nodeapi.NodeInfo {
 	if _, ok = nodeMap[nodeNum]; !ok {
 		ni = sxutil.GetNodeInfo(nodeNum)
 	}
-	log.Printf("NodeInfo: %v \n", ni)
+	//log.Printf("NodeInfo: %v \n", ni)
 
 	return ni
 }
@@ -691,7 +808,7 @@ func prepareGrpcServer(s *synerexServerInfo, opts ...grpc.ServerOption) *grpc.Se
 
 func main() {
 	flag.Parse()
-	sxutil.RegisterNodeName(*nodesrv, "SynerexServer", true)
+	sxutil.RegisterNodeName(*nodesrv, "SynerexServer", true, "", time.Time{})
 
 	monitorapi.InitMonitor(*monitor)
 
