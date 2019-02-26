@@ -28,7 +28,7 @@ type monitorInfo struct {
 }
 
 var (
-	port      = flag.Int("port", 9999, "Monitor Server Listening Port")
+	port      = flag.Int("port", 9998, "Monitor Server Listening Port")
 	mesPort   = flag.Int("mesPort", 9998, "Monitor gRPC Port")
 	nodesrv = flag.String("nodesrv", "127.0.0.1:9990", "Node ID Server")
 	mInfo     monitorInfo

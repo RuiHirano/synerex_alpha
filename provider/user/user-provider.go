@@ -49,7 +49,7 @@ type TaxiDemand struct {
 
 // this function waits
 func startSelection(clt *sxutil.SMServiceClient,d time.Duration){
-	var sid uint64
+	//var sid uint64
 	t_finish = time.Now()
 	duration_if := t_finish.Sub(t_start)
 	fmt.Println("bit time: %d\n\n ",duration_if)
@@ -62,7 +62,7 @@ func startSelection(clt *sxutil.SMServiceClient,d time.Duration){
 	log.Printf("From now, let's find best taxi..")
 	lowest := 99999
 	// find most valuable proposal
-	for k, sp := range spMap {
+	for _, sp := range spMap {
 		dat := TaxiDemand{}
 		js := sp.ArgJson
 		err := json.Unmarshal([]byte(js),&dat)
@@ -70,12 +70,12 @@ func startSelection(clt *sxutil.SMServiceClient,d time.Duration){
 			log.Printf("Err JSON %v",err)
 		}
 		if dat.Price < lowest { // we should check some ...
-			sid = k
+			//sid = k
 		}
 	}
 	mu.Unlock()
 	//log.Printf("Select supply %v", spMap[sid])
-	clt.SelectSupply(spMap[sid])
+	//clt.SelectSupply(spMap[sid])
 	log.Printf("Got Comfirm!!\n\n")
 
 
