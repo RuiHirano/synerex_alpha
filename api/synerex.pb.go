@@ -596,6 +596,8 @@ type Demand struct {
 	Type       ChannelType          `protobuf:"varint,4,opt,name=type,proto3,enum=api.ChannelType" json:"type,omitempty"`
 	DemandName string               `protobuf:"bytes,5,opt,name=demand_name,json=demandName,proto3" json:"demand_name,omitempty"`
 	Ts         *timestamp.Timestamp `protobuf:"bytes,6,opt,name=ts,proto3" json:"ts,omitempty"`
+	St		   uint64				`protobuf:"fixed64,9,opt,name=st,json=st,proto3" json:"st,omitempty"`
+	StTaxi	   uint64				`protobuf:"fixed64,10,opt,name=st_taxi,json=st_taxi,proto3" json:"st_taxi,omitempty"`
 	// message content = 7; // json
 	ArgJson string `protobuf:"bytes,7,opt,name=arg_json,json=argJson,proto3" json:"arg_json,omitempty"`
 	MbusId  uint64 `protobuf:"fixed64,8,opt,name=mbus_id,json=mbusId,proto3" json:"mbus_id,omitempty"`
@@ -657,6 +659,24 @@ func (m *Demand) GetTargetId() uint64 {
 		return m.TargetId
 	}
 	return 0
+}
+
+func (m *Demand) GetSt() uint64 {
+	if m != nil {
+		return m.St
+	}
+	return 0
+}
+
+func (m *Demand) GetStTaxi() uint64 {
+	if m != nil {
+		return m.StTaxi
+	}
+	return 0
+}
+
+func (m *Demand) SetStTaxi(stTaxi uint64){
+	m.StTaxi = stTaxi
 }
 
 func (m *Demand) GetType() ChannelType {

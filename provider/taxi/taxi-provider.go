@@ -5,7 +5,9 @@ package main
 import (
 	"context"
 	"flag"
-	"github.com/synerex/synerex_alpha/api/fleet"
+	"reflect"
+
+	//"github.com/synerex/synerex_alpha/api/fleet"
 	"log"
 	"sync"
 	"time"
@@ -13,7 +15,6 @@ import (
 	pb "github.com/synerex/synerex_alpha/api"
 	"github.com/synerex/synerex_alpha/sxutil"
 	"google.golang.org/grpc"
-	"strconv"
 	"fmt"
 )
 
@@ -24,6 +25,13 @@ var (
 	idlist     []uint64
 	spMap      map[uint64]*sxutil.SupplyOpts
 	mu		sync.Mutex
+	sclient *sxutil.SMServiceClient
+	stTaxiCommunication uint64
+	ftTaxiCommunication uint64
+	stUserCommunication uint64
+	timesTaxiCommunication float64
+	timesAll float64
+	count int
 )
 
 func init(){
@@ -35,6 +43,34 @@ func init(){
 //ユーザーなどほかのプロバイダが走ると呼ばれる関数
 //ユーザーの情報を取得する
 func demandCallback(clt *sxutil.SMServiceClient, dm *pb.Demand) {
+
+	//ここまでが通信時間
+	stUserCommunication = dm.GetSt()
+	stTaxiCommunication = dm.GetStTaxi()
+	ftTaxiCommunication = uint64(time.Now().Nanosecond())
+	timeTaxiCommunication := float64(ftTaxiCommunication - stTaxiCommunication)/1000000
+	timeAll := float64(ftTaxiCommunication - stUserCommunication)/1000000
+	//処理時間
+	fmt.Println("-------------------------------------------------\n")
+	log.Printf("time taxi communication is:  %f\n", timeTaxiCommunication)
+	log.Printf("time all is:  %f\n", timeAll)
+	fmt.Println("---------------------------------------------------\n")
+	//全体平均
+	timesTaxiCommunication += timeTaxiCommunication
+	timesAll += timeAll
+	count += 1
+	iterNum := 100
+	if count == iterNum{
+		fmt.Println("平均\n")
+		log.Printf("avarage taxi communication is:  %f\n", timesTaxiCommunication/float64(iterNum))
+		log.Printf("avarage all is:  %f\n", timesAll/float64(iterNum))
+		timesAll = 0
+		timesTaxiCommunication = 0
+		count = 0
+	}
+
+	//go subscribeDemand(sclient)
+	/*
 	// check if demand is match with my supply.
 	log.Println("Got ride share demand callback")
 	if dm.TargetId != 0 { // this is Select!
@@ -73,7 +109,7 @@ func demandCallback(clt *sxutil.SMServiceClient, dm *pb.Demand) {
 		idlist = append(idlist,pid)
 		spMap[pid] = sp
 		mu.Unlock()
-	}
+	}*/
 }
 
 func subscribeDemand(client *sxutil.SMServiceClient) {
@@ -121,7 +157,8 @@ func main() {
 
 	client := pb.NewSynerexClient(conn)
 	argJson := fmt.Sprintf("{Client:TaxiProVider, Price: %d}",*price)
-	sclient := sxutil.NewSMServiceClient(client, pb.ChannelType_RIDE_SHARE,argJson)
+	sclient = sxutil.NewSMServiceClient(client, pb.ChannelType_RIDE_SHARE,argJson)
+	log.Print(reflect.TypeOf(sclient))
 
 	wg.Add(1)
 	go subscribeDemand(sclient)

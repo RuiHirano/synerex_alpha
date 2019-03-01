@@ -121,9 +121,16 @@ func subscribeSupply(client *sxutil.SMServiceClient) {
 func sendDemand(sclient *sxutil.SMServiceClient, nm string, js string) {
 	opts := &sxutil.DemandOpts{Name: nm, JSON: js}
 	mu.Lock()
-	id := sclient.RegisterDemand(opts, t_start)
-	idlist = append(idlist, id) // my demand list
-	dmMap[id] = opts            // my demand options
+	log.Printf("Start2!!\n\n")
+	iterNum := 100
+	for i := 0; i < iterNum; i++ {
+		t_start = time.Now()
+		//fmt.Printf("start time1: %f\n\n ",uint64(t_start.Nanosecond()))
+		id := sclient.RegisterDemand(opts, t_start)
+
+		idlist = append(idlist, id) // my demand list
+		dmMap[id] = opts            // my demand options
+	}
 	mu.Unlock()
 	//log.Printf("Register my demand as id %v, %v",id,idlist)
 }
@@ -135,8 +142,7 @@ func threshold() string{
 }
 
 func main() {
-	log.Printf("Start!!\n\n")
-	t_start = time.Now()
+
 	flag.Parse()
 
 	sxutil.RegisterNodeName(*nodesrv, "UserProvider", false, threshold(), t_start)

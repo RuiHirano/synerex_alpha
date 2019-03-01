@@ -1,13 +1,6 @@
-package main
+package filter
 
-import (
-	"encoding/json"
-	//"fmt"
-	//"log"
-	"reflect"
-)
-
-
+/*
 func bit_cal(allJson AllJson, score TrustInfo , allThreshold AllThreshold, isUser bool) string{
 
 	node_GT := score.GroupScore
@@ -77,3 +70,5 @@ func bit_cal(allJson AllJson, score TrustInfo , allThreshold AllThreshold, isUse
 		return string(argJson2)
 	}
 }
+
+}*/

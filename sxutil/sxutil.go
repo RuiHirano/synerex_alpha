@@ -141,7 +141,7 @@ func RegisterNodeName(nodesrv string, nm string, isServ bool, th string, st time
 	ts := uint64(73)
 	ps := uint64(35)
 	gs := uint64(30)
-	pt := make([]uint64,20)
+	pt := make([]uint64,0)
 	pt2 := make([]uint64,0)
 	pt3 := make([]uint64,0)
 	pt4 := make([]uint64,0)
@@ -457,7 +457,7 @@ func (clt *SMServiceClient) CloseMbus(ctx context.Context) error {
 }
 
 // RegisterDemand sends Typed Demand to Server
-func (clt *SMServiceClient) RegisterDemand(dmo *DemandOpts, time2 time.Time) uint64 {
+func (clt *SMServiceClient) RegisterDemand(dmo *DemandOpts, st time.Time) uint64 {
 	id := GenerateIntID()
 	ts := ptypes.TimestampNow()
 	dm := api.Demand{
@@ -467,7 +467,10 @@ func (clt *SMServiceClient) RegisterDemand(dmo *DemandOpts, time2 time.Time) uin
 		DemandName: dmo.Name,
 		Ts:         ts,
 		ArgJson:    dmo.JSON,
+		St:			uint64(st.Nanosecond()),
+		StTaxi:		uint64(0),
 	}
+	fmt.Printf("start time2: %f\n\n ",uint64(st.Nanosecond()))
 	switch clt.MType {
 	case api.ChannelType_ROUTING_SERVICE:
 		rsp := api.Demand_Arg_RoutingService{

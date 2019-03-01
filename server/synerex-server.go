@@ -40,8 +40,17 @@ var (
 	port    = flag.Int("port", 10000, "The Synerex Server Listening Port")
 	nodesrv = flag.String("nodesrv", "127.0.0.1:9990", "Node ID Server")
 	monitor = flag.String("monitor", "127.0.0.1:9998", "Monitor Server")
-	t_start time.Time
-	t_finish time.Time
+	stDeal uint64
+	ftDeal uint64
+	stSimpleDeal uint64
+	ftSimpleDeal uint64
+	stUserCommunication uint64
+	ftUserCommunication uint64
+	stTaxiCommunication uint64
+	timesUserCommunication float64
+	timesDeal float64
+	timesSimpleDeal float64
+	count int
 )
 
 type synerexServerInfo struct {
@@ -63,8 +72,41 @@ func init() {
 // Implementation of each Protocol API
 func (s *synerexServerInfo) RegisterDemand(c context.Context, dm *api.Demand) (r *api.Response, e error) {
 	// send demand for desired channels
-	fmt.Printf("Register Demand!!!")
+	//fmt.Printf("Register Demand!!!\n")
+	stUserCommunication = dm.GetSt()
+	//ここまでがユーザー通信
+	ftUserCommunication = uint64(time.Now().Nanosecond())
+	//ここから全体処理時間
+	stDeal = uint64(time.Now().Nanosecond())
+	//duration_if := t_finish.Sub(t_start)
+	/*time1 := float64(uint64(t_finish.Nanosecond())-stInt)/1000000
+	//fmt.Printf("start time: %f\n\n ",stInt)
+	//fmt.Printf("finish time: %f\n\n ",uint64(t_finish.Nanosecond()))
+	// ここからが処理時間
 	//fmt.Printf("RD Message")
+	//duration_if := t_finish2.Sub(t_start2)
+	time2 := float64(t_finish2.Nanosecond()-t_start2.Nanosecond())/1000000
+	timeAll := time1 + time2
+	fmt.Println("-------------------------------------------------\n")
+	fmt.Println(time1)
+	fmt.Println(time2)
+	fmt.Println(timeAll)
+	fmt.Println("---------------------------------------------------\n")
+	times1 += time1
+	times2 += time2
+	timesAll += timeAll
+	count += 1
+	iterNum := 10
+	if count == iterNum{
+		fmt.Println("平均\n")
+		fmt.Println(times1/float64(iterNum))
+		fmt.Println(times2/float64(iterNum))
+		fmt.Println(timesAll/float64(iterNum))
+		times1 = 0
+		times2 = 0
+		timesAll = 0
+		count = 0
+	}*/
 	okFlag := true
 	okMsg := ""
 	s.dmu.RLock()
@@ -72,7 +114,6 @@ func (s *synerexServerInfo) RegisterDemand(c context.Context, dm *api.Demand) (r
 	for i := range chs {
 		ch := chs[i]
 		if len(ch) < MessageChannelBufferSize {
-			t_start = time.Now()
 			ch <- dm
 		} else {
 			okMsg = fmt.Sprintf("RD MessageDrop %v", dm)
@@ -344,10 +385,8 @@ func demandServerFunc(ch chan *api.Demand, stream api.Synerex_SubscribeDemandSer
 	for {
 		select {
 		case dm := <-ch: // may block until receiving info
-			t_finish = time.Now()
-			duration_if := t_finish.Sub(t_start)
-			fmt.Printf("transmission time: %f\n\n ",duration_if)
-			//selspでないとき最初のregidmのときのみ
+
+			/*//selspでないとき最初のregidmのときのみ
 			if dm.ArgJson != "" {
 				//log.Printf("Taxi SP ID %v\n\n", dm.ArgJson)
 				userId := dm.Id
@@ -359,22 +398,59 @@ func demandServerFunc(ch chan *api.Demand, stream api.Synerex_SubscribeDemandSer
 				//log.Printf("user id is:  %v\n\n", dm.ArgJson)
 				log.Printf("user node info is:  %v\n\n", userNodeInfo)
 
-				score := TrustInfo{TrustScore: taxiNodeInfo.TrustScore, PrivateScore: taxiNodeInfo.PrivateScore, GroupScore: taxiNodeInfo.GroupScore}
-				threshold := userStringToJson(userNodeInfo.Threshold)
-				argJson := userInfoStringToJson(dm.ArgJson)
+				//score := TrustInfo{TrustScore: taxiNodeInfo.TrustScore, PrivateScore: taxiNodeInfo.PrivateScore, GroupScore: taxiNodeInfo.GroupScore}
+				//threshold := userStringToJson(userNodeInfo.Threshold)
+				//argJson := userInfoStringToJson(dm.ArgJson)
 				//log.Printf("demandServerFunc:  \n\n")
-				dm.ArgJson = bit_cal(AllJson{UJ: *argJson}, score, AllThreshold{UT: *threshold}, true)
+				//dm.ArgJson = bit_cal(AllJson{UJ: *argJson}, score, AllThreshold{UT: *threshold}, true)
 				//log.Printf("Taxi Data %v\n\n", bit_cal(argJson, score, threshold))
 				//log.Printf("Taxi ArgJson %v\n\n", threshold)
+			}*/
+			//単純な処理時間
+			stSimpleDeal = uint64(time.Now().Nanosecond())
+			_ = if_cal()
+			ftSimpleDeal = uint64(time.Now().Nanosecond())
+			ftDeal = uint64(time.Now().Nanosecond())
+
+			//計測結果
+			timeUserCommunication := float64(ftUserCommunication - stUserCommunication)/1000000
+			timeSimpleDeal := float64(ftSimpleDeal - stSimpleDeal)/1000000
+			timeDeal := float64(ftDeal - stDeal)/1000000
+			fmt.Println("-------------------------------------------------\n")
+			log.Print(count)
+			log.Printf("time user communication is:  %f\n", timeUserCommunication)
+			log.Printf("time simple deal is:  %f\n", timeSimpleDeal)
+			log.Printf("time deal is:  %f\n", timeDeal)
+			fmt.Println("---------------------------------------------------\n")
+
+			timesUserCommunication += timeUserCommunication
+			timesSimpleDeal += timeSimpleDeal
+			timesDeal += timeDeal
+			count += 1
+			iterNum := 100
+			if count == iterNum{
+				fmt.Println("平均\n")
+				log.Printf("average user communication is:  %f\n", timesUserCommunication/float64(iterNum))
+				log.Printf("avarage simple deal is:  %f\n", timesSimpleDeal/float64(iterNum))
+				log.Printf("avarage deal is:  %f\n", timesDeal/float64(iterNum))
+				timesUserCommunication = 0
+				timesDeal = 0
+				timesSimpleDeal = 0
+				count = 0
 			}
-			t_finish = time.Now()
-			duration_if = t_finish.Sub(t_start)
-			fmt.Println("all time: %f\n\n ",duration_if)
+
+
 			//コールバックに送る.idも一緒に送る
+			//ここからタクシー通信開始
+			stTaxiCommunication = uint64(time.Now().Nanosecond())
+			//log.Printf("avarage deal is:  %d\n", stTaxiCommunication)
+			//dm.SetStTaxi(stTaxiCommunication)
+			//log.Printf("avarage deal is:  %d\n", dm.GetStTaxi())
+
 			err := stream.Send(dm)
 
 			if err != nil {
-				//				log.Printf("Error in DemandServer Error %v", err)
+				log.Printf("Error in DemandServer Error %v", err)
 				return err
 			}
 
@@ -447,7 +523,7 @@ func supplyServerFunc(ch chan *api.Supply, stream api.Synerex_SubscribeSupplySer
 		select {
 		case sp := <-ch:
 			//log.Printf("Taxi SP ID %v\n\n", sp.ArgJson)
-			taxiId := sp.Id
+			/*taxiId := sp.Id
 			taxiNodeInfo := idToNodeInfo(uint64(taxiId))
 			userId := id
 			userNodeInfo := idToNodeInfo(uint64(userId))
@@ -461,7 +537,7 @@ func supplyServerFunc(ch chan *api.Supply, stream api.Synerex_SubscribeSupplySer
 			argJson := taxiInfoStringToJson(sp.ArgJson)
 			log.Printf("supplyServerFunc:  \n\n")
 
-			sp.ArgJson = bit_cal(AllJson{TJ: *argJson}, score, AllThreshold{TT:*threshold}, false)
+			sp.ArgJson = bit_cal(AllJson{TJ: *argJson}, score, AllThreshold{TT:*threshold}, false)*/
 			//log.Printf("Taxi Data %v\n\n", bit_cal(argJson, score, threshold))
 			//log.Printf("Taxi ArgJson %v\n\n", sp.ArgJson)
 			okFlg := true
