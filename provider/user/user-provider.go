@@ -121,10 +121,10 @@ func sendDemand(sclient *sxutil.SMServiceClient, nm string, js string) {
 	// ResisterDemand を100回送信
 	iterNum := 100
 	for i := 0; i < iterNum; i++ {
-		time.Sleep(50 * time.Millisecond)
-		log.Print(st)
+		//time.Sleep(500 * time.Millisecond)
+		//log.Print(st)
 		st = uint64(time.Now().UnixNano())
-		log.Print(st)
+		//log.Print(st)
 		id := sclient.RegisterDemand(opts, st)
 
 		idlist = append(idlist, id) // my demand list

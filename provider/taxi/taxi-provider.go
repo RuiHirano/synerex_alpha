@@ -44,7 +44,7 @@ func init(){
 //ユーザーの情報を取得する
 func demandCallback(clt *sxutil.SMServiceClient, dm *pb.Demand) {
 
-	//ここまでが通信時間
+	/*//ここまでが通信時間
 	stUserCommunication = dm.GetSt()
 	stTaxiCommunication = dm.GetStTaxi()
 	ftTaxiCommunication = uint64(time.Now().UnixNano())
@@ -66,6 +66,22 @@ func demandCallback(clt *sxutil.SMServiceClient, dm *pb.Demand) {
 		log.Printf("avarage all is:  %f\n", timesAll/float64(iterNum))
 		timesAll = 0
 		timesTaxiCommunication = 0
+		count = 0
+	}*/
+
+
+	if count ==0{
+		stUserCommunication = dm.GetSt()
+	}
+	count += 1
+	iterNum := 100
+	// 100回平均を出す
+	if count == iterNum{
+		ftTaxiCommunication = uint64(time.Now().UnixNano())
+		timeAll := float64(ftTaxiCommunication - stUserCommunication)/1000000
+		fmt.Println("平均\n")
+		log.Printf("avarage all is:  %f\n", timeAll/float64(iterNum))
+		timeAll = 0
 		count = 0
 	}
 

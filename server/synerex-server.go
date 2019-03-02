@@ -266,14 +266,15 @@ func demandServerFunc(ch chan *api.Demand, stream api.Synerex_SubscribeDemandSer
 		case dm := <-ch:
 
 			//単純な処理時間
-			stSimpleDeal = uint64(time.Now().UnixNano())
-			_ = if_cal()
-			ftSimpleDeal = uint64(time.Now().UnixNano())
-			ftDeal = uint64(time.Now().UnixNano())
+			//stSimpleDeal = uint64(time.Now().UnixNano())
+			//_ = if_cal()
+			//ftSimpleDeal = uint64(time.Now().UnixNano())
+			//ftDeal = uint64(time.Now().UnixNano())
 
+			/*
 			//計測結果
 			timeUserCommunication := float64(ftUserCommunication - stUserCommunication)/1000000
-			timeSimpleDeal := float64(ftSimpleDeal - stSimpleDeal)
+			timeSimpleDeal := float64(ftSimpleDeal - stSimpleDeal)/1000
 			timeDeal := float64(ftDeal - stDeal)/1000
 			fmt.Println("-------------------------------------------------\n")
 			log.Print(count)
@@ -283,7 +284,7 @@ func demandServerFunc(ch chan *api.Demand, stream api.Synerex_SubscribeDemandSer
 			//log.Printf("ftsim user is:  %d\n", ftSimpleDeal)
 			//log.Printf("stsim user is:  %d\n", stSimpleDeal)
 			log.Printf("time user communication is:  %f ms\n", timeUserCommunication)
-			log.Printf("time simple deal is:  %f ns\n", timeSimpleDeal)
+			log.Printf("time simple deal is:  %f μs\n", timeSimpleDeal)
 			log.Printf("time deal is:  %f μs\n", timeDeal)
 			fmt.Println("---------------------------------------------------\n")
 
@@ -303,11 +304,11 @@ func demandServerFunc(ch chan *api.Demand, stream api.Synerex_SubscribeDemandSer
 				timesDeal = 0
 				timesSimpleDeal = 0
 				count = 0
-			}
+			}*/
 
 
 			//ここからタクシー通信開始
-			stTaxiCommunication = uint64(time.Now().UnixNano())
+			//stTaxiCommunication = uint64(time.Now().UnixNano())
 
 			err := stream.Send(dm)
 

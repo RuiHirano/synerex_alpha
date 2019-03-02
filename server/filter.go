@@ -5,7 +5,7 @@ import (
 )
 
 func bit_cal() bool {
-	infoNum := 200000
+	infoNum := 200
 	isPass := false
 	groupBit := uint64(63)
 	for i:=0; i<infoNum; i++{
@@ -21,7 +21,7 @@ func bit_cal() bool {
 
 func if_cal() bool{
 
-	infoNum := 200000
+	infoNum := 200
 	isPass := false
 	groupBit := uint64(64)
 	for i:=0; i<infoNum; i++{
