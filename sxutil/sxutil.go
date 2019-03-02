@@ -117,7 +117,7 @@ func startKeepAlive() {
 }
 
 // RegisterNodeName is a function to register node name with node server address
-func RegisterNodeName(nodesrv string, nm string, isServ bool, th string, st time.Time) error { // register ID to server
+func RegisterNodeName(nodesrv string, nm string, isServ bool) error { // register ID to server
 	var opts []grpc.DialOption
 	opts = append(opts, grpc.WithInsecure()) // insecure
 	var err error
@@ -141,10 +141,6 @@ func RegisterNodeName(nodesrv string, nm string, isServ bool, th string, st time
 	ts := uint64(73)
 	ps := uint64(35)
 	gs := uint64(30)
-	pt := make([]uint64,0)
-	pt2 := make([]uint64,0)
-	pt3 := make([]uint64,0)
-	pt4 := make([]uint64,0)
 	//log.Println(pt)
 	nif := nodeapi.NodeInfo{
 		NodeName: nm,
@@ -153,12 +149,6 @@ func RegisterNodeName(nodesrv string, nm string, isServ bool, th string, st time
 		TrustScore: ts,
 		PrivateScore: ps,
 		GroupScore: gs,
-		Threshold: th,
-		PerformanceTest: pt,
-		PerformanceTest2: pt2,
-		PerformanceTest3: pt3,
-		PerformanceTest4: pt4,
-		StartTime: int64(st.Day()),
 	}
 	myNodeName = nm
 	var ee error
@@ -457,7 +447,7 @@ func (clt *SMServiceClient) CloseMbus(ctx context.Context) error {
 }
 
 // RegisterDemand sends Typed Demand to Server
-func (clt *SMServiceClient) RegisterDemand(dmo *DemandOpts, st time.Time) uint64 {
+func (clt *SMServiceClient) RegisterDemand(dmo *DemandOpts, st uint64) uint64 {
 	id := GenerateIntID()
 	ts := ptypes.TimestampNow()
 	dm := api.Demand{
@@ -467,10 +457,10 @@ func (clt *SMServiceClient) RegisterDemand(dmo *DemandOpts, st time.Time) uint64
 		DemandName: dmo.Name,
 		Ts:         ts,
 		ArgJson:    dmo.JSON,
-		St:			uint64(st.Nanosecond()),
+		St:			uint64(st),
 		StTaxi:		uint64(0),
 	}
-	fmt.Printf("start time2: %f\n\n ",uint64(st.Nanosecond()))
+	//fmt.Printf("start time2: %f\n\n ",uint64(st.Nanosecond()))
 	switch clt.MType {
 	case api.ChannelType_ROUTING_SERVICE:
 		rsp := api.Demand_Arg_RoutingService{

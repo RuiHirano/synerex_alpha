@@ -47,13 +47,13 @@ func demandCallback(clt *sxutil.SMServiceClient, dm *pb.Demand) {
 	//ここまでが通信時間
 	stUserCommunication = dm.GetSt()
 	stTaxiCommunication = dm.GetStTaxi()
-	ftTaxiCommunication = uint64(time.Now().Nanosecond())
+	ftTaxiCommunication = uint64(time.Now().UnixNano())
 	timeTaxiCommunication := float64(ftTaxiCommunication - stTaxiCommunication)/1000000
 	timeAll := float64(ftTaxiCommunication - stUserCommunication)/1000000
 	//処理時間
 	fmt.Println("-------------------------------------------------\n")
-	log.Printf("time taxi communication is:  %f\n", timeTaxiCommunication)
-	log.Printf("time all is:  %f\n", timeAll)
+	log.Printf("time taxi communication is:  %f ms\n", timeTaxiCommunication)
+	log.Printf("time all is:  %f ms\n", timeAll)
 	fmt.Println("---------------------------------------------------\n")
 	//全体平均
 	timesTaxiCommunication += timeTaxiCommunication
@@ -141,7 +141,7 @@ func threshold() string{
 
 func main() {
 	flag.Parse()
-	sxutil.RegisterNodeName(*nodesrv, "TaxiProvider", true, threshold(), time.Time{})
+	sxutil.RegisterNodeName(*nodesrv, "TaxiProvider", true)
 
 	go sxutil.HandleSigInt()
 	sxutil.RegisterDeferFunction(sxutil.UnRegisterNode)

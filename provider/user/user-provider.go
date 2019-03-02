@@ -23,8 +23,7 @@ var (
 	spMap		map[uint64]*pb.Supply
 	selection 	bool
 	mu	sync.Mutex
-	t_start time.Time
-	t_finish time.Time
+	st uint64
 )
 
 func init() {
@@ -50,9 +49,6 @@ type TaxiDemand struct {
 // this function waits
 func startSelection(clt *sxutil.SMServiceClient,d time.Duration){
 	//var sid uint64
-	t_finish = time.Now()
-	duration_if := t_finish.Sub(t_start)
-	fmt.Println("bit time: %d\n\n ",duration_if)
 
 	for i := 0; i < 5; i++{
 		time.Sleep(d / 5)
@@ -101,7 +97,7 @@ func supplyCallback(clt *sxutil.SMServiceClient, sp *pb.Supply) {
 		// if there is no selection .. lets start
 		if !selection {
 			selection = true
-			go startSelection(clt, time.Second*5)
+			//go startSelection(clt, time.Second*5)
 		}
 	}else{
 //		log.Printf("This is not my supply id %v, %v",sp,idlist)
@@ -121,18 +117,20 @@ func subscribeSupply(client *sxutil.SMServiceClient) {
 func sendDemand(sclient *sxutil.SMServiceClient, nm string, js string) {
 	opts := &sxutil.DemandOpts{Name: nm, JSON: js}
 	mu.Lock()
-	log.Printf("Start2!!\n\n")
+	log.Printf("Start!\n")
+	// ResisterDemand を100回送信
 	iterNum := 100
 	for i := 0; i < iterNum; i++ {
-		t_start = time.Now()
-		//fmt.Printf("start time1: %f\n\n ",uint64(t_start.Nanosecond()))
-		id := sclient.RegisterDemand(opts, t_start)
+		time.Sleep(50 * time.Millisecond)
+		log.Print(st)
+		st = uint64(time.Now().UnixNano())
+		log.Print(st)
+		id := sclient.RegisterDemand(opts, st)
 
 		idlist = append(idlist, id) // my demand list
 		dmMap[id] = opts            // my demand options
 	}
 	mu.Unlock()
-	//log.Printf("Register my demand as id %v, %v",id,idlist)
 }
 
 func threshold() string{
@@ -144,8 +142,7 @@ func threshold() string{
 func main() {
 
 	flag.Parse()
-
-	sxutil.RegisterNodeName(*nodesrv, "UserProvider", false, threshold(), t_start)
+	sxutil.RegisterNodeName(*nodesrv, "UserProvider", false)
 
 	go sxutil.HandleSigInt()
 	sxutil.RegisterDeferFunction(sxutil.UnRegisterNode)

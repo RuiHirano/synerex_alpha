@@ -13,7 +13,6 @@ package main
 
 import (
 	"context"
-	"encoding/json"
 	"errors"
 	"flag"
 	"fmt"
@@ -72,41 +71,13 @@ func init() {
 // Implementation of each Protocol API
 func (s *synerexServerInfo) RegisterDemand(c context.Context, dm *api.Demand) (r *api.Response, e error) {
 	// send demand for desired channels
-	//fmt.Printf("Register Demand!!!\n")
+
 	stUserCommunication = dm.GetSt()
 	//ここまでがユーザー通信
-	ftUserCommunication = uint64(time.Now().Nanosecond())
+	ftUserCommunication = uint64(time.Now().UnixNano())
 	//ここから全体処理時間
-	stDeal = uint64(time.Now().Nanosecond())
-	//duration_if := t_finish.Sub(t_start)
-	/*time1 := float64(uint64(t_finish.Nanosecond())-stInt)/1000000
-	//fmt.Printf("start time: %f\n\n ",stInt)
-	//fmt.Printf("finish time: %f\n\n ",uint64(t_finish.Nanosecond()))
-	// ここからが処理時間
-	//fmt.Printf("RD Message")
-	//duration_if := t_finish2.Sub(t_start2)
-	time2 := float64(t_finish2.Nanosecond()-t_start2.Nanosecond())/1000000
-	timeAll := time1 + time2
-	fmt.Println("-------------------------------------------------\n")
-	fmt.Println(time1)
-	fmt.Println(time2)
-	fmt.Println(timeAll)
-	fmt.Println("---------------------------------------------------\n")
-	times1 += time1
-	times2 += time2
-	timesAll += timeAll
-	count += 1
-	iterNum := 10
-	if count == iterNum{
-		fmt.Println("平均\n")
-		fmt.Println(times1/float64(iterNum))
-		fmt.Println(times2/float64(iterNum))
-		fmt.Println(timesAll/float64(iterNum))
-		times1 = 0
-		times2 = 0
-		timesAll = 0
-		count = 0
-	}*/
+	stDeal = uint64(time.Now().UnixNano())
+
 	okFlag := true
 	okMsg := ""
 	s.dmu.RLock()
@@ -118,7 +89,7 @@ func (s *synerexServerInfo) RegisterDemand(c context.Context, dm *api.Demand) (r
 		} else {
 			okMsg = fmt.Sprintf("RD MessageDrop %v", dm)
 			okFlag = false
-			log.Printf("RD MessageDrop %v\n", dm)
+			//log.Printf("RD MessageDrop %v\n", dm)
 		}
 	}
 	s.dmu.RUnlock()
@@ -170,13 +141,11 @@ func (s *synerexServerInfo) ProposeDemand(c context.Context, dm *api.Demand) (r 
 	return r, nil
 }
 func (s *synerexServerInfo) ProposeSupply(c context.Context, sp *api.Supply) (r *api.Response, e error) {
-	//log.Printf("PS MessageDroop %v\n", sp)
+
 	okFlag := true
 	okMsg := ""
 	s.smu.RLock()
 	chs := s.supplyChans[sp.GetType()]
-	//log.Printf("sp_type: %v\n", sp.GetType())
-	//log.Printf("chs %v\n", chs)
 	for i := range chs {
 		ch := chs[i]
 		if len(ch) < MessageChannelBufferSize {
@@ -289,138 +258,33 @@ func (s *synerexServerInfo) Confirm(c context.Context, tg *api.Target) (r *api.R
 	return r, nil
 }
 
-type AllThreshold struct {
-	TT TaxiThreshold
-	UT UserThreshold
-}
-
-type AllJson struct {
-	TJ TaxiArgJson
-	UJ UserArgJson
-}
-
-type TrustInfo struct {
-	TrustScore uint64 `json:"TrustScore"`
-	PrivateScore uint64 `json:"PrivateScore"`
-	GroupScore uint64 `json:"GroupScore"`
-}
-
-type TaxiThreshold struct {
-	Price TrustInfo `json:"Price"`
-	Distance TrustInfo `json:"Distance"`
-	Arrival TrustInfo `json:"Arrival"`
-	Destination TrustInfo `json:"Destination"`
-	Position TrustInfo `json:"Position"`
-}
-
-type LatLong struct {
-	Latitude float64 `json:"Latitude"`
-	Longitude float64 `json:"Longitude"`
-}
-type TaxiArgJson struct {
-	Price uint64 `json:"Price"`
-	Distance uint64 `json:"Distance"`
-	Arrival uint64 `json:"Arrival"`
-	Destination uint64 `json:"Destination"`
-	Position LatLong `json:"Position"`
-}
-//閾値をjson化
-func taxiStringToJson(taxiJsonStr string) *TaxiThreshold{
-	jsonBytes := ([]byte)(taxiJsonStr)
-	data := new(TaxiThreshold)
-
-	if err := json.Unmarshal(jsonBytes, data); err != nil {
-		fmt.Println("JSON Unmarshal error:", err)
-		return nil
-	}
-	return data
-}
-//ArgJsonをjson化
-func taxiInfoStringToJson(taxiJsonStr string) *TaxiArgJson{
-	jsonBytes := ([]byte)(taxiJsonStr)
-	data := new(TaxiArgJson)
-
-	if err := json.Unmarshal(jsonBytes, data); err != nil {
-		fmt.Println("JSON Unmarshal error:", err)
-		return nil
-	}
-	return data
-}
-
-type UserArgJson struct {
-	Destination LatLong `json:"Destination"`
-	Duration uint64 `json:"Duration"`
-}
-
-type UserThreshold struct {
-	Destination TrustInfo `json:"Destination"`
-	Duration TrustInfo `json:"Duration"`
-}
-//閾値をjson化
-func userStringToJson(userJsonStr string) *UserThreshold{
-	jsonBytes := ([]byte)(userJsonStr)
-	data := new(UserThreshold)
-
-	if err := json.Unmarshal(jsonBytes, data); err != nil {
-		fmt.Println("JSON Unmarshal error:", err)
-		return nil
-	}
-	return data
-}
-//ArgJsonをjson化
-func userInfoStringToJson(userJsonStr string) *UserArgJson{
-	jsonBytes := ([]byte)(userJsonStr)
-	data := new(UserArgJson)
-
-	if err := json.Unmarshal(jsonBytes, data); err != nil {
-		fmt.Println("JSON Unmarshal error:", err)
-		return nil
-	}
-	return data
-}
-
 // go routine which wait demand channel and sending demands to each providers.
 func demandServerFunc(ch chan *api.Demand, stream api.Synerex_SubscribeDemandServer, id uint64) error {
-	log.Printf("demandServerFunc!!\n")
+	//log.Printf("demandServerFunc!!\n")
 	for {
 		select {
-		case dm := <-ch: // may block until receiving info
+		case dm := <-ch:
 
-			/*//selspでないとき最初のregidmのときのみ
-			if dm.ArgJson != "" {
-				//log.Printf("Taxi SP ID %v\n\n", dm.ArgJson)
-				userId := dm.Id
-				userNodeInfo := idToNodeInfo(uint64(userId))
-				taxiId := id
-				taxiNodeInfo := idToNodeInfo(uint64(taxiId))
-				//log.Printf("taxi id is:  %v\n\n", taxiId)
-				//log.Printf("taxi node info is:  %v\n\n", taxiNodeInfo)
-				//log.Printf("user id is:  %v\n\n", dm.ArgJson)
-				log.Printf("user node info is:  %v\n\n", userNodeInfo)
-
-				//score := TrustInfo{TrustScore: taxiNodeInfo.TrustScore, PrivateScore: taxiNodeInfo.PrivateScore, GroupScore: taxiNodeInfo.GroupScore}
-				//threshold := userStringToJson(userNodeInfo.Threshold)
-				//argJson := userInfoStringToJson(dm.ArgJson)
-				//log.Printf("demandServerFunc:  \n\n")
-				//dm.ArgJson = bit_cal(AllJson{UJ: *argJson}, score, AllThreshold{UT: *threshold}, true)
-				//log.Printf("Taxi Data %v\n\n", bit_cal(argJson, score, threshold))
-				//log.Printf("Taxi ArgJson %v\n\n", threshold)
-			}*/
 			//単純な処理時間
-			stSimpleDeal = uint64(time.Now().Nanosecond())
+			stSimpleDeal = uint64(time.Now().UnixNano())
 			_ = if_cal()
-			ftSimpleDeal = uint64(time.Now().Nanosecond())
-			ftDeal = uint64(time.Now().Nanosecond())
+			ftSimpleDeal = uint64(time.Now().UnixNano())
+			ftDeal = uint64(time.Now().UnixNano())
 
 			//計測結果
 			timeUserCommunication := float64(ftUserCommunication - stUserCommunication)/1000000
-			timeSimpleDeal := float64(ftSimpleDeal - stSimpleDeal)/1000000
-			timeDeal := float64(ftDeal - stDeal)/1000000
+			timeSimpleDeal := float64(ftSimpleDeal - stSimpleDeal)
+			timeDeal := float64(ftDeal - stDeal)/1000
 			fmt.Println("-------------------------------------------------\n")
 			log.Print(count)
-			log.Printf("time user communication is:  %f\n", timeUserCommunication)
-			log.Printf("time simple deal is:  %f\n", timeSimpleDeal)
-			log.Printf("time deal is:  %f\n", timeDeal)
+			//log.Printf("ft user is:  %d\n", ftDeal2)
+			//log.Printf("ft user is:  %d\n", ftDeal)
+			//log.Printf("st user is:  %d\n", stDeal)
+			//log.Printf("ftsim user is:  %d\n", ftSimpleDeal)
+			//log.Printf("stsim user is:  %d\n", stSimpleDeal)
+			log.Printf("time user communication is:  %f ms\n", timeUserCommunication)
+			log.Printf("time simple deal is:  %f ns\n", timeSimpleDeal)
+			log.Printf("time deal is:  %f μs\n", timeDeal)
 			fmt.Println("---------------------------------------------------\n")
 
 			timesUserCommunication += timeUserCommunication
@@ -429,10 +293,12 @@ func demandServerFunc(ch chan *api.Demand, stream api.Synerex_SubscribeDemandSer
 			count += 1
 			iterNum := 100
 			if count == iterNum{
+				fmt.Println("-------------------------------------------------\n")
 				fmt.Println("平均\n")
-				log.Printf("average user communication is:  %f\n", timesUserCommunication/float64(iterNum))
-				log.Printf("avarage simple deal is:  %f\n", timesSimpleDeal/float64(iterNum))
-				log.Printf("avarage deal is:  %f\n", timesDeal/float64(iterNum))
+				log.Printf("average user communication is:  %f ms\n", timesUserCommunication/float64(iterNum))
+				log.Printf("avarage simple deal is:  %f ns\n", timesSimpleDeal/float64(iterNum))
+				log.Printf("avarage deal is:  %f μs\n", timesDeal/float64(iterNum))
+				fmt.Println("-------------------------------------------------\n")
 				timesUserCommunication = 0
 				timesDeal = 0
 				timesSimpleDeal = 0
@@ -440,12 +306,8 @@ func demandServerFunc(ch chan *api.Demand, stream api.Synerex_SubscribeDemandSer
 			}
 
 
-			//コールバックに送る.idも一緒に送る
 			//ここからタクシー通信開始
-			stTaxiCommunication = uint64(time.Now().Nanosecond())
-			//log.Printf("avarage deal is:  %d\n", stTaxiCommunication)
-			//dm.SetStTaxi(stTaxiCommunication)
-			//log.Printf("avarage deal is:  %d\n", dm.GetStTaxi())
+			stTaxiCommunication = uint64(time.Now().UnixNano())
 
 			err := stream.Send(dm)
 
@@ -522,24 +384,7 @@ func supplyServerFunc(ch chan *api.Supply, stream api.Synerex_SubscribeSupplySer
 	for {
 		select {
 		case sp := <-ch:
-			//log.Printf("Taxi SP ID %v\n\n", sp.ArgJson)
-			/*taxiId := sp.Id
-			taxiNodeInfo := idToNodeInfo(uint64(taxiId))
-			userId := id
-			userNodeInfo := idToNodeInfo(uint64(userId))
-			//log.Printf("taxi id is:  %v\n\n", taxiId)
-			//log.Printf("taxi node info is:  %v\n\n", taxiNodeInfo)
-			//log.Printf("user id is:  %v\n\n", userId)
-			//log.Printf("user node info is:  %v\n\n", userNodeInfo)
 
-			score := TrustInfo{TrustScore: userNodeInfo.TrustScore, PrivateScore: userNodeInfo.PrivateScore, GroupScore: userNodeInfo.GroupScore}
-			threshold := taxiStringToJson(taxiNodeInfo.Threshold)
-			argJson := taxiInfoStringToJson(sp.ArgJson)
-			log.Printf("supplyServerFunc:  \n\n")
-
-			sp.ArgJson = bit_cal(AllJson{TJ: *argJson}, score, AllThreshold{TT:*threshold}, false)*/
-			//log.Printf("Taxi Data %v\n\n", bit_cal(argJson, score, threshold))
-			//log.Printf("Taxi ArgJson %v\n\n", sp.ArgJson)
 			okFlg := true
 			if okFlg {
 				err := stream.Send(sp)
@@ -734,7 +579,7 @@ func idToNode(id uint64) string {
 	if str, ok = nodeMap[nodeNum]; !ok {
 		str = sxutil.GetNodeName(nodeNum)
 	}
-	log.Printf("%v Subscr Error", str)
+	//log.Printf("%v Subscr Error", str)
 	rs := strings.Replace(str, "Provider", "", -1)
 	rs2 := strings.Replace(rs, "Server", "", -1)
 	return rs2 + ":" + strconv.Itoa(nodeNum)
@@ -884,7 +729,7 @@ func prepareGrpcServer(s *synerexServerInfo, opts ...grpc.ServerOption) *grpc.Se
 
 func main() {
 	flag.Parse()
-	sxutil.RegisterNodeName(*nodesrv, "SynerexServer", true, "", time.Time{})
+	sxutil.RegisterNodeName(*nodesrv, "SynerexServer", true)
 
 	monitorapi.InitMonitor(*monitor)
 
