@@ -33,7 +33,7 @@ import (
 	"google.golang.org/grpc"
 )
 
-const MessageChannelBufferSize = 10
+const MessageChannelBufferSize = 10000
 
 var (
 	port    = flag.Int("port", 10000, "The Synerex Server Listening Port")
@@ -82,6 +82,7 @@ func (s *synerexServerInfo) RegisterDemand(c context.Context, dm *api.Demand) (r
 	okMsg := ""
 	s.dmu.RLock()
 	chs := s.demandChans[dm.GetType()]
+
 	for i := range chs {
 		ch := chs[i]
 		if len(ch) < MessageChannelBufferSize {
@@ -89,11 +90,13 @@ func (s *synerexServerInfo) RegisterDemand(c context.Context, dm *api.Demand) (r
 		} else {
 			okMsg = fmt.Sprintf("RD MessageDrop %v", dm)
 			okFlag = false
-			//log.Printf("RD MessageDrop %v\n", dm)
+			log.Printf("RD MessageDrop %v\n", dm)
 		}
 	}
+
 	s.dmu.RUnlock()
 	r = &api.Response{Ok: okFlag, Err: okMsg}
+	
 	return r, nil
 }
 
@@ -266,8 +269,9 @@ func demandServerFunc(ch chan *api.Demand, stream api.Synerex_SubscribeDemandSer
 		case dm := <-ch:
 
 			//単純な処理時間
+			isPass := true
 			//stSimpleDeal = uint64(time.Now().UnixNano())
-			//_ = if_cal()
+			isPass = if_cal()
 			//ftSimpleDeal = uint64(time.Now().UnixNano())
 			//ftDeal = uint64(time.Now().UnixNano())
 
@@ -310,11 +314,14 @@ func demandServerFunc(ch chan *api.Demand, stream api.Synerex_SubscribeDemandSer
 			//ここからタクシー通信開始
 			//stTaxiCommunication = uint64(time.Now().UnixNano())
 
-			err := stream.Send(dm)
+			if isPass {
+				err := stream.Send(dm)
 
-			if err != nil {
-				log.Printf("Error in DemandServer Error %v", err)
-				return err
+				if err != nil {
+
+					log.Printf("Error in DemandServer Error %v", err)
+					return err
+				}
 			}
 
 		}
@@ -347,6 +354,7 @@ func removeSupplyChannelFromSlice(sl []chan *api.Supply, c chan *api.Supply) []c
 // streamはプロバイダのコールバック関数
 func (s *synerexServerInfo) SubscribeDemand(ch *api.Channel, stream api.Synerex_SubscribeDemandServer) error {
 	// TODO: we can check the duplication of node id here! (especially 1024 snowflake node ID)
+
 	idt := sxutil.IDType(ch.GetClientId())
 	s.dmu.RLock()
 	_, ok := s.demandMap[ch.Type][idt]
@@ -355,14 +363,16 @@ func (s *synerexServerInfo) SubscribeDemand(ch *api.Channel, stream api.Synerex_
 		return errors.New(fmt.Sprintf("duplicated SubscribeDemand ClientID %d", idt))
 	}
 
+
 	// It is better to logging here.
 	//モニターに送信
-	//	monitorapi.SendMes(&monitorapi.Mes{Message:"Subscribe Demand", Args: fmt.Sprintf("Type:%d,From: %x  %s",ch.Type,ch.ClientId, ch.ArgJson )})
-	monitorapi.SendMessage("SubscribeDemand", int(ch.Type), 0, ch.ClientId, 0,0, ch.ArgJson)
+	//monitorapi.SendMes(&monitorapi.Mes{Message:"Subscribe Demand", Args: fmt.Sprintf("Type:%d,From: %x  %s",ch.Type,ch.ClientId, ch.ArgJson )})
+	//monitorapi.SendMessage("SubscribeDemand", int(ch.Type), 0, ch.ClientId, 0,0, ch.ArgJson)
 
 	subCh := make(chan *api.Demand, MessageChannelBufferSize)
 	// We should think about thread safe coding.
 	tp := ch.GetType()
+
 	s.dmu.Lock()
 	s.demandChans[tp] = append(s.demandChans[tp], subCh)
 	s.demandMap[tp][idt] = subCh // mapping from clientID to channel
@@ -371,10 +381,12 @@ func (s *synerexServerInfo) SubscribeDemand(ch *api.Channel, stream api.Synerex_
 	err := demandServerFunc(subCh, stream, uint64(idt)) // infinite go routine?
 	// if this returns, stream might be closed.
 	// we should remove channel
+
 	s.dmu.Lock()
 	delete(s.demandMap[tp], idt) // remove map from idt
 	s.demandChans[tp] = removeDemandChannelFromSlice(s.demandChans[tp], subCh)
 	//log.Printf("Remove Demand Stream Channel %v", ch)
+
 	s.dmu.Unlock()
 	return err
 }
@@ -414,7 +426,7 @@ func (s *synerexServerInfo) SubscribeSupply(ch *api.Channel, stream api.Synerex_
 	subCh := make(chan *api.Supply, MessageChannelBufferSize)
 
 	//	monitorapi.SendMes(&monitorapi.Mes{Message:"Subscribe Supply", Args: fmt.Sprintf("Type:%d, From: %x %s",ch.Type,ch.ClientId,ch.ArgJson )})
-	monitorapi.SendMessage("SubscribeSupply", int(ch.Type),0, ch.ClientId, 0,0, ch.ArgJson)
+	//monitorapi.SendMessage("SubscribeSupply", int(ch.Type),0, ch.ClientId, 0,0, ch.ArgJson)
 
 	s.smu.Lock()
 	//log.Printf("sp_type, tp: %v\n", ch.GetType())
@@ -647,12 +659,12 @@ func unaryServerInterceptor(logger *logrus.Logger, s *synerexServerInfo) grpc.Un
 		//		monitorapi.SendMes(&monitorapi.Mes{Message:method+":"+args, Args:""})
 
 		dstId := s.messageStore.getSrcId(tgtId)
-		meth := strings.Replace(method, "Propose", "P", 1)
-		met2 := strings.Replace(meth, "Register", "R", 1)
-		met3 := strings.Replace(met2, "Supply", "S", 1)
-		met4 := strings.Replace(met3, "Demand", "D", 1)
+		//meth := strings.Replace(method, "Propose", "P", 1)
+		//met2 := strings.Replace(meth, "Register", "R", 1)
+		//met3 := strings.Replace(met2, "Supply", "S", 1)
+		//met4 := strings.Replace(met3, "Demand", "D", 1)
 		// it seems here to stuck.
-		go monitorapi.SendMessage(met4, msgType,mid, srcId, dstId,tgtId, args)
+		//go monitorapi.SendMessage(met4, msgType,mid, srcId, dstId,tgtId, args)
 
 		// register for messageStore
 		s.messageStore.AddMessage(method, msgType, mid, srcId, dstId, args)

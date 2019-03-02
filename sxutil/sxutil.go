@@ -468,14 +468,15 @@ func (clt *SMServiceClient) RegisterDemand(dmo *DemandOpts, st uint64) uint64 {
 		}
 		dm.ArgOneof = &rsp
 	case api.ChannelType_RIDE_SHARE:
+		//log.Print(dmo)
 		if dmo.RideShare != nil{
 			dm.WithRideShare(dmo.RideShare)
-//			rsp := api.Demand_Arg_RideShare{
-//				dmo.RideShare,
-//			}
-//			dm.ArgOneof = &rsp
+			//rsp := api.Demand_Arg_RideShare{
+			//	dmo.RideShare,
+			//}
+			//dm.ArgOneof = &rsp
 		}else{
-			log.Printf("Rideshare info is nil")
+			//log.Printf("Rideshare info is nil")
 		}
 
 	}

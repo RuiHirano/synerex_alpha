@@ -27,7 +27,7 @@ func if_cal() bool{
 	for i:=0; i<infoNum; i++{
 		isPass = false
 		infoBit := uint64(75)
-		for k := 0; k < int(infoBit); k++ {
+		for k := 0; k < 64; k++ {
 			// 最右部の1までの距離を比較
 			if bits.TrailingZeros64(uint64(infoBit))==0{
 				if bits.TrailingZeros64(uint64(groupBit))==0{

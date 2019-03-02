@@ -5,7 +5,6 @@ import (
 	"flag"
 	"log"
 	"sync"
-	"math/rand"
 
 	pb "github.com/synerex/synerex_alpha/api"
 	"github.com/synerex/synerex_alpha/sxutil"
@@ -119,7 +118,7 @@ func sendDemand(sclient *sxutil.SMServiceClient, nm string, js string) {
 	mu.Lock()
 	log.Printf("Start!\n")
 	// ResisterDemand を100回送信
-	iterNum := 100
+	iterNum := 1
 	for i := 0; i < iterNum; i++ {
 		//time.Sleep(500 * time.Millisecond)
 		//log.Print(st)
@@ -163,12 +162,12 @@ func main() {
 	wg := sync.WaitGroup{}
 
 	wg.Add(1)
-	go subscribeSupply(sclient)
+	//go subscribeSupply(sclient)
 
-	for {
+	//for {
 		sendDemand(sclient, "Share Ride to Home", `{"Destination": {"Latitude": 36.5, "Longitude": 135.6}, "Duration": 1200}`)
-		time.Sleep(time.Second * time.Duration(10 + rand.Int()%10))
-	}
+	//	time.Sleep(time.Second * time.Duration(10 + rand.Int()%10))
+	//}
 	wg.Wait()
 	sxutil.CallDeferFunctions() // cleanup!
 
